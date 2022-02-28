@@ -7,12 +7,28 @@ output: html_document
 library(tidyverse)
 library(sf)
 library(tidycensus)
+
+library(magrittr)
+library(arrow)
+```
+
+```{r prep_data, eval=FALSE}
+census_data <- read_feather("../../glpdata/data-raw/microdata/acs_micro.feather")
+
+census_data %<>%
+  filter(FIPS == "21111")
+
+write_feather(census_data, "raw_data/census_data.feather")
+
+library(glpdata)
+
+save(population_tract, file = "raw_data/tract_population.RData")
+
 ```
 
 # Political Representation
 
 ## Metro Council
-
 
 ```{r metro_council}
 metro_council <- read_csv("raw_data/Vati's work!!")
@@ -28,9 +44,24 @@ council_pct_female <- (metro_council$gender == "F") / 26
 
 # use readxl::read_excel to load the voter registration file
 
-# use tidycensus to download population data
+# use population_tract for population data
+
+v20 <- load_variables(2020, "pl", cache = TRUE)
+
+t=tidycensus::get_decennial("voting district", )
 
 # combine data frames
+
+```
+
+
+# Housing data
+
+```{r read_data}
+
+# Load in census data
+
+# Create breakdowns - gender, age, mother, head of household
 
 ```
 
