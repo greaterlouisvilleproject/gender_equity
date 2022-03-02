@@ -57,11 +57,86 @@ t=tidycensus::get_decennial("voting district", )
 
 # Housing data
 
-```{r read_data}
+In this first chunk, let's read in the Census microdata. Here is some example code on how to read in the data, create new variables to categorize the rows of data into groups, and then summarize the data to create information about Louisville.
+
+Our goal is to create variables for gender, age group, whether someone is a mother, whether someone is married, their level of education, their income, whether they are the head of household, and the number of children they have.
+
+
+```{r read_and_classify}
 
 # Load in census data
+census_microdata <- read_feather("raw_data/census_data.feather")
 
-# Create breakdowns - gender, age, mother, head of household
+# For age, need to categorize into groups, like this using case_when:
+census_microdata %<>%
+  mutate(
+    age_group = case_when(
+      age <= 18      ~ "0_18",
+      age %in% 19:30 ~ "19_30"))
+
+# To summarize the data, we can use the survey package, which will handle all of the weights for us
+library(survey)
+
+survey_object <- svydesign(id=~0, data = census_microdata, weights = ~PERWT)
+
+output <- svyby(~age_group, ~sex+year, survey_object, svytotal, na.rm = TRUE)
+
+# Or, we can summarize the data ourselves. I think this method is simpler.
+output <- census_microdata %<>%
+  group_by(year, sex, age_group) %>%
+  summarize(num = sum(PERWT, na.rm = TRUE))
+
+
+# Harrison will redownload the raw file so we can include more detailed information on race as well as the same-sex marriages
+```
+
+This code chunk will identify which households are homeowners vs. renters (in the homeownership variable) and which households are cost-burdened, meaning they pay more thatn 30% of their income toward rent or a mortgage (in the cost_burden variable).
+
+There are also variables for severe cost burden (households that pay more than half of their income towards housing) and households with severe housing problems (lacking a kitchen, adequate plumbing, or an ample number of rooms for the number of people living there).
+```{r}
+# To classify the housing data into homeowners, renters, cost-bu
+census_data %<>%
+  group_by(year, SERIAL) %>%
+  mutate(hh_members = n()) %>%
+  ungroup() %>%
+  filter(PERNUM == 1) %>%
+  mutate(
+    OWNCOST  = replace(OWNCOST, OWNCOST == 99999, NA),
+    HHINCOME = replace(HHINCOME, HHINCOME == 99999, NA),
+    OWNERSHP = replace(OWNERSHP, OWNERSHP == 0, NA),
+    RENTGRS  = replace(RENTGRS, RENTGRS == 0 & OWNERSHP == 1, NA),
+
+    homeownership = if_else(OWNERSHP == 1, T, F),
+
+    hcost = if_else(homeownership == 1, OWNCOST, RENTGRS),
+    cost_burden = if_else(hcost * 12 / HHINCOME > 0.3, T, F),
+    severe_cost_burden = if_else(hcost * 12 / HHINCOME > 0.5, 1, 0),
+
+    hh_type = case_when(
+      homeownership  & !cost_burden ~ "noncb_homeowner",
+      homeownership  & cost_burden  ~ "cb_homeowner",
+      !homeownership & !cost_burden ~ "noncb_renter",
+      !homeownership & cost_burden  ~ "cb_renter",
+      TRUE ~ NA_character_),
+    
+    KITCHEN  = replace(KITCHEN, KITCHEN == 0, NA),
+    ROOMS    = replace(ROOMS, ROOMS == 0, NA),
+    PLUMBING = replace(PLUMBING, PLUMBING == 0, NA),
+
+    severe_housing_problems = if_else(
+      KITCHEN == 1 | PLUMBING == 10 | hh_members / ROOMS > 1 | severe_cost_burden, T, F))
 
 ```
+
+
+For each category that we've come up with, we want to summarize the data by year, gender, the housing characteristics (like are they a homeowner or a renter?), and the other characteristics (like what is their income level?)
+
+
+year | gender | homeownership | cost_burden | mother | head_of_household
+
+```{r}
+
+
+```
+
 
