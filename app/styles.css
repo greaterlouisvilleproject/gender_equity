@@ -1,0 +1,35 @@
+@font-face {
+  src: url(MuseoSans_300.ttf);
+  font-family: "Museo";
+}
+
+body {
+  font-family: Museo, sans-serif !important;
+}
+
+.story {
+  background-color: #E3EAEE;
+  margin-top: 25px;
+  padding: 25px;
+}
+
+.story-blue {
+  background-color: #0E4A99;
+  margin-top: 25px;
+  padding: 25px;
+}
+
+
+.story-blue p, .story-blue h6, .story-blue h5, .story-blue h4 {
+  color: #FFFFFF;
+}
+
+.leaflet-container {
+    background: #FFF;
+}
+
+#img-id{
+  position: absolute;
+  right: 10px;
+  top: 5px;
+}
