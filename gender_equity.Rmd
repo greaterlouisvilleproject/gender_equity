@@ -84,7 +84,7 @@ output <- svyby(~age_group, ~sex+year, survey_object, svytotal, na.rm = TRUE)
 # Or, we can summarize the data ourselves. I think this method is simpler.
 output <- census_microdata %<>%
   group_by(year, sex, age_group) %>%
-  summarize(num = sum(PERWT, na.rm = TRUE))
+  summarize(number_of_people = sum(PERWT, na.rm = TRUE))
 
 
 # Harrison will redownload the raw file so we can include more detailed information on race as well as the same-sex marriages
