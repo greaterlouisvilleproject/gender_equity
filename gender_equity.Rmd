@@ -10,8 +10,13 @@ library(tidycensus)
 
 library(magrittr)
 library(arrow)
+
+library(ggplot2)
+library(glptools)
+library(stringr)
 ```
 
+#Skip
 ```{r prep_data, eval=FALSE}
 census_data <- read_feather("../../glpdata/data-raw/microdata/acs_micro.feather")
 
@@ -61,7 +66,7 @@ In this first chunk, let's read in the Census microdata. Here is some example co
 
 Our goal is to create variables for gender, age group, whether someone is a mother, whether someone is married, their level of education, their income, whether they are the head of household, and the number of children they have.
 
-
+#Skip
 ```{r read_and_classify}
 
 # Load in census data
@@ -90,12 +95,34 @@ output <- census_microdata %<>%
 # Harrison will redownload the raw file so we can include more detailed information on race as well as the same-sex marriages
 ```
 
+
+#Start
+```{r read in new data, eval=FALSE}
+acs_micro_8_11_22 <- read_feather("raw_data/acs_micro_FIPS_repwts_8_11_22.feather") 
+
+acs_micro_8_11_22 %<>%
+  filter(FIPS == "21111")
+
+
+write_feather(acs_micro_8_11_22, "raw_data/census_data_8_11_22.feather")
+
+```
+
+```{r explore new data, eval=FALSE}
+#File for use below
+census_microdata081122 <- read_feather("raw_data/census_data_8_11_22.feather") 
+
+
+
+```
 This code chunk will identify which households are homeowners vs. renters (in the homeownership variable) and which households are cost-burdened, meaning they pay more thatn 30% of their income toward rent or a mortgage (in the cost_burden variable).
 
 There are also variables for severe cost burden (households that pay more than half of their income towards housing) and households with severe housing problems (lacking a kitchen, adequate plumbing, or an ample number of rooms for the number of people living there).
 ```{r}
 # To classify the housing data into homeowners, renters, cost-bu
-census_data %<>%
+#also create income brackets, earner types
+
+census_microdata081122 %<>%
   group_by(year, SERIAL) %>%
   mutate(hh_members = n()) %>%
   ungroup() %>%
@@ -124,7 +151,26 @@ census_data %<>%
     PLUMBING = replace(PLUMBING, PLUMBING == 0, NA),
 
     severe_housing_problems = if_else(
-      KITCHEN == 1 | PLUMBING == 10 | hh_members / ROOMS > 1 | severe_cost_burden, T, F))
+      KITCHEN == 1 | PLUMBING == 10 | hh_members / ROOMS > 1 | severe_cost_burden, T, F),
+    
+#income brackets based on HHINCOME
+  #LH-Lower half -> lower40% 
+  #UH-Upper Half -> 40th to 80th 
+  #T20 -> top 20th percentile
+
+    
+    income_group = case_when(
+      HHINCOME <= quantile(HHINCOME, probs = 0.4) ~ 'LH',
+      HHINCOME <= quantile(HHINCOME, probs = 0.8) ~ 'UH',
+      HHINCOME > quantile(HHINCOME, probs = 0.8) ~ 'T20',
+      TRUE ~ NA_character_),
+
+  earner_type = case_when(
+    HHINCOME == INCTOT ~ 'single_earner',
+    HHINCOME != INCTOT ~ 'multi_earner',
+    HHINCOME == 0 ~ 'no_earnings')
+)
+
 
 ```
 
@@ -134,9 +180,241 @@ For each category that we've come up with, we want to summarize the data by year
 
 year | gender | homeownership | cost_burden | mother | head_of_household
 
-```{r}
+``` {r, eval=False}
+library(ggplot2)
+library(glptools)
+library(stringr)
 
+lville_2019 <- census_microdata081122 %>% 
+  filter(year == '2019')
 
 ```
 
 
+```{r educ x OWN_AND_CB, eval=FALSE}
+
+#Summarize education level x ownership / CB
+output_edu_home_cb <- census_microdata081122 %>%
+  group_by(year, hh_type, educ) %>%
+  summarize(number_of_people = sum(PERWT, na.rm = TRUE))
+
+  #use survey_by_demog function -> look at help text
+
+```
+
+```{r educ x OWN_AND_CB, eval=FALSE}
+#1.Male vs Female
+sex_breakdown <- lville_2019 %>%
+  group_by(sex) %>%
+  summarize(n=sum(HHWT, na.rm = TRUE)) %>%
+  mutate(total = sum(n),rate = n/sum(n)
+  )
+  
+View(sex_breakdown)
+```
+
+```{r, eval=FALSE}
+
+#2.Earner  breakdown 
+#(single female, vs single male, vs multi earner) ->need to manipulate to reach desired metric
+
+#old code
+earner_breakdown <- lville_2019 %>%
+  group_by(earner_type, sex) %>%
+  summarize(n=sum(HHWT, na.rm = TRUE)) %>%
+  mutate(total = sum(n),rate = n/sum(n)
+  )
+
+survey_by_demog(lville_2019, 
+                'earner_type',
+                )
+```
+
+```{r, eval = False}
+
+##3.Household types by sex
+
+#old code
+hh_sex <- lville_2019 %>%
+  group_by(sex, hh_type) %>%
+  summarize(n=sum(HHWT, na.rm = TRUE)) %>%
+  mutate(total = sum(n),rate = n/sum(n)
+  )
+
+survey_by_demog(lville_2019, 
+                'hh_type',
+                )
+
+```
+
+```{r, eval = False}
+
+##4.Education by sex
+
+#old code
+edu_sex <- lville_2019 %>%
+  group_by(educ, sex) %>%
+  summarize(n=sum(HHWT, na.rm = TRUE)) %>%
+  mutate(total = sum(n),percent = n/sum(n)
+  )
+
+#plot
+ggplot(edu_sex,
+       aes( x = factor(educ, level = c('grad','bach','assoc','some_col','hs','no_hs')) ,
+           y = percent,
+           fill = sex)) +
+  geom_bar(position="dodge", stat="identity") + 
+          scale_y_continuous(labels = scales::percent)
+
+#survey function...how is this plotted?
+survey_by_demog(lville_2019, 
+                'educ',
+                )
+```
+
+```{r, eval = False}
+
+## All 5a - 5c is old code..see survey function at end of chuck
+## 5a. Income bucks representation for women
+inc_breakdown_female <- lville_2019 %>% 
+  filter(sex == 'female')%>%
+  group_by(income_group) %>%
+  summarize(n=sum(HHWT, na.rm = TRUE)) %>%
+  mutate(total = sum(n),rate = n/sum(n)
+  )
+
+## 5b. Women single earner breakdown
+inc_breakdown_female_single <- lville_2019 %>% 
+  filter(sex == 'female' & earner_type == 'single_earner')%>%
+  group_by(income_group) %>%
+  summarize(n=sum(HHWT, na.rm = TRUE)) %>%
+  mutate(total = sum(n),rate = n/sum(n)
+  )
+
+## 5c. Male Single earner breakdown
+inc_breakdown_male_single <- lville_2019 %>% 
+  filter(sex == 'male' & earner_type == 'single_earner')%>%
+  group_by(income_group) %>%
+  summarize(n=sum(HHWT, na.rm = TRUE)) %>%
+  mutate(total = sum(n),rate = n/sum(n)
+  )
+
+survey_by_demog(lville_2019, 
+                'income_group',
+                )
+
+```
+
+
+```{r, eval = Fale}
+## 6a. single earner female vs single earner male vs multi eaners group by hh_type
+multi_eaner_hh_breakdown <- lville_2019 %>% 
+  filter(earner_type == 'multi_earner') %>%
+  group_by(hh_type) %>%
+  summarize(n=sum(HHWT, na.rm = TRUE)) %>%
+  mutate(total = sum(n),rate = n/sum(n)
+  )
+
+survey_by_demog(lville_2019, 
+                'earner_type',
+                )
+```
+
+
+```{r, eval = False}
+## 6b -> single male/female household type
+
+#old code
+single_fem_male_earner_hh_breakdown <- lville_2019 %>% 
+  filter(earner_type == 'single_earner') %>%
+  group_by(sex, hh_type) %>%
+  summarize(n=sum(HHWT, na.rm = TRUE)) %>%
+  mutate(total = sum(n),rate = n/sum(n)
+  )
+
+single_fem_male_earner_hh_survey <- lville_2019 %>% 
+  filter(earner_type == 'single_earner') %>%
+  survey_by_demog(lville_2019, 
+                'income_group',
+              )
+
+```
+
+
+```{r, eval = False}
+## 6c.single earner female vs single earner male vs multi eaners group by income_group
+multi_vs_single_income <- lville_2019 %>%
+  mutate(spec_earn_type = case_when(
+    earner_type == 'multi_earner' ~ 'multi',
+    earner_type == 'single_earner' & sex == 'female' ~ 'single_female_earner',
+    earner_type == 'single_earner' & sex == 'male' ~ 'single_male_earner')) %>%
+  
+  group_by(spec_earn_type, income_group) %>%
+  summarize(n=sum(HHWT, na.rm = TRUE)) %>%
+  mutate(total = sum(n),percent = n/sum(n)
+  )
+```
+
+
+```{r, eval = False}
+# 6c. plot
+ggplot(multi_vs_single_income,
+       aes(x = spec_earn_type,
+           y = percent,
+           fill = income_group)) +
+  geom_bar(position="dodge", stat="identity") + 
+          scale_y_continuous(labels = scales::percent)
+```
+
+
+```{r, eval = False}
+# 6d. Multi earner breakdown by income group
+multi_eaner_inc_breakdown <- lville_2019 %>% 
+  filter(earner_type == 'multi_earner') %>%
+  group_by(income_group) %>%
+  summarize(n=sum(HHWT, na.rm = TRUE)) %>%
+  mutate(total = sum(n),rate = n/sum(n)
+  )
+
+```
+
+
+```{r, eval = False}
+## 6e. single male/female income
+single_earner_inc_breakdown <- lville_2019 %>% 
+  filter(earner_type == 'single_earner') %>%
+  group_by(sex, income_group) %>%
+  summarize(n=sum(HHWT, na.rm = TRUE)) %>%
+  mutate(total = sum(n),rate = n/sum(n)
+  )
+```
+
+```{r,eval=FALSE}
+
+### Household Structure
+#break data down by (1) marital status, (2) presence and number of children, and perhaps whether the (3) household is a three-generation household or includes other relatives.
+
+census_microdata %>% 
+  recode(MARST, 1 = 'Married, with Spouse', 2 = 'Married, without Spouse',  3='Seperated',4='Divocred', 5='Widowed', 6= 'Single', .default = NA_character_),
+
+  recode(MULTGEN, 0 = NA_character_, 1 = 'one_gen', 2 = 'two_gen', 3 = 'three_gen_min', .default = NA_character_))
+
+# census_microdata %>% group_by(household_type) %>% summarize(n = n()) ### can also use this for multigen. just count obversations
+
+## Use NCHILD for number of children: Coded 0-9 with 9 indicating at least 9 children
+
+
+
+```
+
+#Old code don't need
+```{r, eval=FALSE}
+#Find's single male/female ownership rate 
+single_own <- lville_2019 %>% 
+  filter(earner_type == 'single_earner' & str_detect(hh_type,"own")) %>%
+  group_by(sex) %>%
+  summarize(n=n()) %>% 
+  mutate(total = sum(n), 
+         owner_rate = n/total*100
+  )
+```
