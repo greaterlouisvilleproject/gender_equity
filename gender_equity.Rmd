@@ -1,9 +1,12 @@
 ---
-title: "gener_equity"
+title: "Gender Equity Dashboard"
 output: html_document
+
 ---
 
 ```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, dev.args=list(bg="transparent"))
+
 library(tidyverse)
 library(sf)
 library(tidycensus)
@@ -82,20 +85,6 @@ census_microdata %<>%
       age <= 18      ~ "0_18",
       age %in% 19:30 ~ "19_30"))
 
-# To summarize the data, we can use the survey package, which will handle all of the weights for us
-library(survey)
-
-survey_object <- svydesign(id=~0, data = census_microdata, weights = ~PERWT)
-
-output <- svyby(~age_group, ~sex+year, survey_object, svytotal, na.rm = TRUE)
-
-# Or, we can summarize the data ourselves. I think this method is simpler.
-output <- census_microdata %<>%
-  group_by(year, sex, age_group) %>%
-  summarize(number_of_people = sum(PERWT, na.rm = TRUE))
-
-
-# Harrison will redownload the raw file so we can include more detailed information on race as well as the same-sex marriages
 ```
 
 
@@ -731,24 +720,16 @@ geom_bar(stat="identity", position=position_dodge())
 
 ```
 
-```{r, eval= FALSE}
-survey_by_demog(lville_2019, 
-                weight_var = "HHWT", 'homeownership')%>% filter(var_type == 'percent') %>%
-  ggplot( aes(x=race, y=homeownership, fill=sex)) + 
+```{r}
+p <- survey_by_demog(census_microdata081122, 
+                weight_var = "HHWT", 'homeownership')%>% 
+      filter(var_type == 'percent')
+
+ggplot(p, aes(x=race, y=homeownership, fill=sex)) + 
 geom_bar(stat="identity", position=position_dodge())
 ```
 
 
-```{r, eval = FALSE}
-p <- survey_by_demog(lville_2019, 
-                weight_var = "HHWT", 'homeownership')
-
-q <- p %>% filter(var_type == 'percent')
-
-ggplot(q, aes(x=race, y=homeownership, fill=sex)) + 
-geom_bar(stat="identity", position=position_dodge())
-
-```
 
 ```{r, eval = FALSE}
 # Housing type, female single vs female multiple
