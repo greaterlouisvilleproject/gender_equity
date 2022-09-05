@@ -1,7 +1,9 @@
 ---
 title: "Gender Equity Dashboard"
 output: html_document
-
+    # toc: true
+    # toc_float: true
+    # code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
@@ -17,11 +19,12 @@ library(arrow)
 library(ggplot2)
 library(glptools)
 library(stringr)
-#library(Hmisc)
+
 ```
 
+
+```{r prep_data, eval=FALSE, include=FALSE}
 #Skip
-```{r prep_data, eval=FALSE}
 census_data <- read_feather("../../glpdata/data-raw/microdata/acs_micro.feather")
 
 census_data %<>%
@@ -35,61 +38,17 @@ save(population_tract, file = "raw_data/tract_population.RData")
 
 ```
 
-# Political Representation
-
-## Metro Council
-
-#Skip
-```{r metro_council, eval = FALSE}
-# metro_council <- read_csv("raw_data/Vati's work!!")
-# 
-# council_pct_female <- (metro_council$gender == "F") / 26
-```
-
-```{r state_legislature, eval=FALSE}
-
-```
-
-#Skip
-```{r voter_registration, eval=FALSE}
-
-# use readxl::read_excel to load the voter registration file
-
-# use population_tract for population data
-
-v20 <- load_variables(2020, "pl", cache = TRUE)
-
-t=tidycensus::get_decennial("voting district", )
-
-# combine data frames
-
-```
-
-
 # Housing data
 
 In this first chunk, let's read in the Census microdata. Here is some example code on how to read in the data, create new variables to categorize the rows of data into groups, and then summarize the data to create information about Louisville.
 
 Our goal is to create variables for gender, age group, whether someone is a mother, whether someone is married, their level of education, their income, whether they are the head of household, and the number of children they have.
 
-#Skip
-```{r read_and_classify}
-
-# Load in census data
-census_microdata <- read_feather("raw_data/census_data.feather")
-
-# For age, need to categorize into groups, like this using case_when:
-census_microdata %<>%
-  mutate(
-    age_group = case_when(
-      age <= 18      ~ "0_18",
-      age %in% 19:30 ~ "19_30"))
-
-```
 
 
+```{r read in new data, eval=FALSE, include=FALSE}
 #Skip - only use if changing the ACS file
-```{r read in new data, eval=FALSE}
+
 acs_micro_8_11_22 <- read_feather("raw_data/acs_micro_FIPS_repwts_8_11_22.feather") 
 
 acs_micro_8_11_22 %<>%
@@ -100,18 +59,17 @@ write_feather(acs_micro_8_11_22, "raw_data/census_data_8_11_22.feather")
 
 ```
 
+
+```{r explore new data, include=FALSE}
 #Start
-```{r explore new data}
 #File for use below
 census_microdata081122 <- read_feather("raw_data/census_data_8_11_22.feather") 
-
-
 
 ```
 This code chunk will identify which households are homeowners vs. renters (in the homeownership variable) and which households are cost-burdened, meaning they pay more thatn 30% of their income toward rent or a mortgage (in the cost_burden variable).
 
 There are also variables for severe cost burden (households that pay more than half of their income towards housing) and households with severe housing problems (lacking a kitchen, adequate plumbing, or an ample number of rooms for the number of people living there).
-```{r}
+```{r, include= FALSE}
 # To classify the housing data into homeowners, renters, cost-bu
 #also create income brackets, earner types
 
@@ -173,7 +131,7 @@ For each category that we've come up with, we want to summarize the data by year
 
 year | gender | homeownership | cost_burden | mother | head_of_household
 
-``` {r}
+``` {r, include = FALSE}
 #Louisville 2019 data
 
 lville_2019 <- census_microdata081122 %>% 
@@ -181,268 +139,8 @@ lville_2019 <- census_microdata081122 %>%
 
 ```
 
-#Harrison uses to create percentiles
-#Useful for finding medians
-```{r, eval = FALSE}
-test <- lville_2019 %>%
-  mutate(
-    HHINCOME = replace(HHINCOME, HHINCOME == 9999999, NA_real_)) %>%
-  summarize(
-    LH = Hmisc::wtd.quantile(HHINCOME, weights = HHWT, probs = 0.4),
-    UH = Hmisc::wtd.quantile(HHINCOME, weights = HHWT, probs = 0.8))
 
-#
-```
-
-```{r educ x OWN_AND_CB, eval=FALSE}
-#1.Male vs Female
-#sex_breakdown <- 
-lville_2019 %>%
-  group_by(sex) %>%
-  summarize(n=sum(HHWT, na.rm = TRUE)) %>%
-  mutate(total = sum(n),rate = n/sum(n)
-  )
-  
-```
-
-
-```{r, eval=FALSE}
-
-#2.Earner  breakdown 
-#(single female, vs single male, vs multi earner) ->need to manipulate to reach desired metric
-
-#old code
-#earner_breakdown <- 
-lville_2019 %>%
-  group_by(earner_type, sex) %>%
-  summarize(n=sum(HHWT, na.rm = TRUE)) %>%
-  mutate(total = sum(n),rate = n/sum(n)
-  )
-
-```
-
-```{r, eval = FALSE}
-survey_by_demog(lville_2019, 
-                'earner_type',
-                )
-
-```
-
-```{r, eval = FALSE}
-
-##3.Household types by sex
-
-#old code
-hh_sex <- lville_2019 %>%
-  group_by(sex, hh_type) %>%
-  summarize(n=sum(HHWT, na.rm = TRUE)) %>%
-  mutate(total = sum(n),rate = n/sum(n)
-  )
-
-```
-
-```{r, eval = FALSE}
-##4.Education by sex
-
-#old code
-edu_sex <- lville_2019 %>%
-  group_by(educ, sex) %>%
-  summarize(n=sum(HHWT, na.rm = TRUE)) %>%
-  mutate(total = sum(n),percent = n/sum(n)
-  )
-```
-
-```{r, eval = FALSE}
-#plot
-ggplot(edu_sex,
-       aes( x = factor(educ, level = c('grad','bach','assoc','some_col','hs','no_hs')) ,
-           y = percent,
-           fill = sex)) +
-  geom_bar(position="dodge", stat="identity") + 
-          scale_y_continuous(labels = scales::percent)
-```
-
-
-```{r, eval = FALSE}
-
-#survey function...how is this plotted?
-survey_by_demog(lville_2019, 
-                'educ',
-                )
-```
-
-```{r, eval = FALSE}
-## All 5a - 5c is old code..see survey function at end of chuck
-## 5a. Income bucks representation for women
-inc_breakdown_female <- lville_2019 %>% 
-  filter(sex == 'female')%>%
-  group_by(income_group) %>%
-  summarize(n=sum(HHWT, na.rm = TRUE)) %>%
-  mutate(total = sum(n),rate = n/sum(n)
-  )
-```
-
-
-```{r, eval = FALSE}
-## 5b. Women single earner breakdown
-inc_breakdown_female_single <- lville_2019 %>% 
-  filter(sex == 'female' & earner_type == 'single_earner')%>%
-  group_by(income_group) %>%
-  summarize(n=sum(HHWT, na.rm = TRUE)) %>%
-  mutate(total = sum(n),rate = n/sum(n)
-  )
-```
-
-
-```{r, eval = FALSE}
-## 5c. Male Single earner breakdown
-lville_2019 %>% 
-  filter(sex == 'male' & earner_type == 'single_earner')%>%
-  group_by(income_group) %>%
-  summarize(n=sum(HHWT, na.rm = TRUE)) %>%
-  mutate(total = sum(n),rate = n/sum(n)
-  )
-```
-
-
-```{r, eval = FALSE}
-survey_by_demog(lville_2019, 
-                'income_group',
-                )
-
-```
-
-
-```{r, eval = FALSE}
-## 6a. single earner female vs single earner male vs multi eaners group by hh_type
-lville_2019 %>% 
-  filter(earner_type == 'multi_earner') %>%
-  group_by(hh_type) %>%
-  summarize(n=sum(HHWT, na.rm = TRUE)) %>%
-  mutate(total = sum(n),rate = n/sum(n)
-  )
-```
-
-
-```{r, eval = FALSE}
-survey_by_demog(lville_2019, 
-                'earner_type',
-                )
-```
-
-```{r, eval = FALSE}
-## 6b -> single male/female household type
-
-#old code
-single_fem_male_earner_hh_breakdown <- lville_2019 %>% 
-  filter(earner_type == 'single_earner') %>%
-  group_by(sex, hh_type) %>%
-  summarize(n=sum(HHWT, na.rm = TRUE)) %>%
-  mutate(total = sum(n),rate = n/sum(n)
-  )
-```
-
-
-```{r, eval = FALSE}
-single_fem_male_earner_hh_survey <- lville_2019 %>% 
-  filter(earner_type == 'single_earner') %>%
-  survey_by_demog(lville_2019, 
-                'income_group',
-              )
-
-```
-
-
-```{r, eval = FALSE}
-## 6c.single earner female vs single earner male vs multi eaners group by income_group
-multi_vs_single_income <- lville_2019 %>%
-  mutate(spec_earn_type = case_when(
-    earner_type == 'multi_earner' ~ 'multi',
-    earner_type == 'single_earner' & sex == 'female' ~ 'single_female_earner',
-    earner_type == 'single_earner' & sex == 'male' ~ 'single_male_earner')) %>%
-  
-  group_by(spec_earn_type, income_group) %>%
-  summarize(n=sum(HHWT, na.rm = TRUE)) %>%
-  mutate(total = sum(n),percent = n/sum(n)
-  )
-```
-
-
-```{r, eval = FALSE}
-# 6c. plot
-ggplot(multi_vs_single_income,
-       aes(x = spec_earn_type,
-           y = percent,
-           fill = income_group)) +
-  geom_bar(position="dodge", stat="identity") + 
-          scale_y_continuous(labels = scales::percent)
-```
-
-
-```{r, eval = FALSE}
-# 6d. Multi earner breakdown by income group
-multi_eaner_inc_breakdown <- lville_2019 %>% 
-  filter(earner_type == 'multi_earner') %>%
-  group_by(income_group) %>%
-  summarize(n=sum(HHWT, na.rm = TRUE)) %>%
-  mutate(total = sum(n),rate = n/sum(n)
-  )
-
-```
-
-
-```{r, eval = FALSE}
-## 6e. single male/female income
-single_earner_inc_breakdown <- lville_2019 %>% 
-  filter(earner_type == 'single_earner') %>%
-  group_by(sex, income_group) %>%
-  summarize(n=sum(HHWT, na.rm = TRUE)) %>%
-  mutate(total = sum(n), rate = n/sum(n)
-  )
-```
-
-
-```{r, eval=FALSE}
-#Is homeownership of black women going up or down?
-#homeownership: Values are TRUE or FALSE
-#Isolate louisville data for years 2017,2018,2019 as test
-#should this be filtered to only include single earners? (do my filters ensure female head of house)
-
-#year %in% c(2017, 2018, 2019)
-#year %in% 2017:2019
-census_microdata081122 %>% 
-  
-  filter(year == 2019| 
-        year == 2018 | 
-        year == 2017,
-        race == 'black',
-        sex == 'female') %>%
-  
-  group_by(year, homeownership) %>%
-  
-  summarize(n=sum(HHWT, na.rm = TRUE)) %>%
-  
-  mutate(
-        Freq = n/sum(n))
-```
-
-
-```{r, eval=FALSE}
-survey_by_demog(census_microdata081122 %>% 
-                  filter(sex == 'female',
-                         ), 
-                'homeownership',
-                )
-```
-
-```{r}
-#plot above data when format is decided
-#probably use a bar chart
-
-
-```
-
-```{r,eval=FALSE}
+```{r,eval=FALSE, include=FALSE}
 
 ### Household Structure
 #break data down by (1) marital status, (2) presence and number of children, and perhaps whether the (3) household is a three-generation household or includes other relatives.
@@ -471,34 +169,7 @@ cut_95 = quantile(lville_2019$HHINCOME, probs = 0.95)
 ```
 
 
-```{r}
-#Base function to see year by year comparison
-#looks at income across years. Only parameter is data frame that is filtered when function is called
-func_plt_hist_base <- function(data) {
-  
-  p <- data %>% 
-  mutate(year = factor(year)) %>%
-  mutate(text = fct_reorder(year, HHINCOME)) %>%
-  
-  ggplot( aes(x=HHINCOME, color=text, fill=text, weight = HHWT)) +
-    geom_histogram(alpha=0.5, binwidth = 10000) +
-    scale_fill_viridis(discrete=TRUE) +
-    scale_color_viridis(discrete=TRUE) +
-    theme_ipsum() +
-    theme(
-      legend.position="none",
-      panel.spacing = unit(0.1, "lines"),
-      strip.text.x = element_text(size = 8)
-    ) +
-    xlab("Household Income") +
-    ylab("Count") +
-    facet_wrap(~text)
-    
-  return (p)
-}
-```
-
-```{r}
+```{r, include=FALSE}
 
 #Updated version of above function used to compare groups rather than same group over time
 func_plt_hist_updated <- function(data, var) {
@@ -513,7 +184,7 @@ func_plt_hist_updated <- function(data, var) {
   
   ggplot( aes(x=HHINCOME, color=text, fill=text, weight = HHWT)) +
     geom_histogram(alpha=0.5, binwidth = 10000) +
-    geom_vline(xintercept = cut_95, col = "red") +
+    #geom_vline(xintercept = cut_95, col = "red") +
     scale_fill_viridis(discrete=TRUE) +
     scale_color_viridis(discrete=TRUE) +
     theme_ipsum() +
@@ -530,7 +201,7 @@ func_plt_hist_updated <- function(data, var) {
 }
 ```
 
-```{r}
+```{r, include=FALSE}
 #Overlayed histogram
 func_plt_hist_overlay <- function(data, var) {
 
@@ -538,7 +209,7 @@ func_plt_hist_overlay <- function(data, var) {
 
   p <- data %>% ggplot( aes(x=HHINCOME, fill=group, weight = HHWT)) +
     geom_histogram( color="#e9ecef", alpha=0.5, position = 'identity', binwidth = 10000 ) +
-    geom_vline(xintercept = cut_95, col = "red") +
+    #geom_vline(xintercept = cut_95, col = "red") +
     scale_fill_viridis(discrete=TRUE) +
     scale_color_viridis(discrete=TRUE) +
     theme_ipsum() +
@@ -550,7 +221,7 @@ func_plt_hist_overlay <- function(data, var) {
   
 ```
 
-```{r}
+```{r, include=FALSE}
 #Overlay density plot
 func_plt_dens_overlay <- function(data, var) {
 
@@ -558,40 +229,19 @@ func_plt_dens_overlay <- function(data, var) {
 
   q <- data %>% ggplot( aes(x=HHINCOME, fill=group, weight = HHWT)) +
     geom_density( color="#e9ecef", alpha=0.5, position = 'identity', binwidth = 10000 ) +
-    geom_vline(xintercept = cut_95, col = "red") +
+    #geom_vline(xintercept = cut_95, col = "red") +
     scale_fill_viridis(discrete=TRUE) +
     scale_color_viridis(discrete=TRUE) +
     theme_ipsum() +
     labs(fill="")
 
   return (q)
-
 }
   
 ```
 
-```{r, eval = FALSE}
-#Compare 2019, 2018, 2017: uses base hist function
-census_microdata081122 %>% 
-      filter(year == 2019| 
-        year == 2018 | 
-        year == 2017) %>%
-  func_plt_hist_base()
-```
 
-```{r, eval = FALSE}
-#Black, Female, 2017 to 2019: uses base hist function
-census_microdata081122 %>%
-  filter(year == 2019| 
-        year == 2018 | 
-        year == 2017,
-        race == 'black',
-        sex == 'female') %>%
-  func_plt_hist_base()
-
-```
-
-
+#Income
 ```{r}
 #Male vs. Female income
 lville_2019 %>%
@@ -614,6 +264,7 @@ lville_2019 %>%
 
 ```{r}
 #Single male vs. single female income, truncated
+
 lville_2019 %>% 
   filter(earner_type == 'single_earner',
       HHINCOME <= cut_95) %>%
@@ -662,6 +313,7 @@ lville_2019 %>%
 ```{r}
 #race by income overlay, truncated - tested with overlayed density plot...right path but could display info better...ideally can make this graph interactive so ppl can select a specfic group and then can also select specific percentiles...create df using suvery by demog function
 
+
 census_microdata081122 %>% 
   filter(year %in% 2017:2019,
     sex == 'female',
@@ -681,61 +333,24 @@ survey_by_demog(df, type = 'mean', "HHINCOME")
 
 ```
 
+# Homeownership
+```{r, Male vs Female}
 
-#### Moving into Bar charts rather than histograms
-
-```{r, eval = FALSE}
-lville_2019 %>%
-  filter(sex == 'female') %>%
-  mutate(homeownership = replace(homeownership, homeownership == T, 'Homeowner'),
-         homeownership = replace(homeownership, homeownership == F, 'Non homeowner')) %>%
-
-  group_by(race, homeownership) %>%
-  summarize(n=sum(HHWT, na.rm = TRUE)) %>%
-  mutate(total = sum(n),percent = n/sum(n)
-  ) %>% 
-
-ggplot( aes(x = homeownership,
-           y = percent,
-           fill = race)) +
-  geom_bar(position="dodge", stat="identity") +
-          scale_y_continuous(labels = scales::percent)
-```
-
-
-
-```{r, eval=FALSE}
-# Housing
-x<-lville_2019 %>%
   
-  mutate(homeownership = replace(homeownership, homeownership == T, 'Homeowner'),
-         homeownership = replace(homeownership, homeownership == F, 'Non homeowner'))
+p<-survey_by_demog(lville_2019, weight_var = "HHWT", 'homeownership') %>%
+  filter(var_type == 'percent',
+         race == 'total',
+         sex != 'total')
   
-p<-survey_by_demog(x, weight_var = "HHWT", 'homeownership',)
-  
-ggplot(p, aes(x=race, y=homeownership, fill=sex)) + #can HHWT be incorporated or is it unnecessary?
+ggplot(p, aes(x=sex, y=homeownership)) + 
 geom_bar(stat="identity", position=position_dodge())
 
-
-
-```
-
-```{r}
-p <- survey_by_demog(census_microdata081122, 
-                weight_var = "HHWT", 'homeownership')%>% 
-      filter(var_type == 'percent')
-
-ggplot(p, aes(x=race, y=homeownership, fill=sex)) + 
-geom_bar(stat="identity", position=position_dodge())
 ```
 
 
-
-```{r, eval = FALSE}
-# Housing type, female single vs female multiple
+```{r, Single Female vs. Mult Inc Female}
 
 lville_2019 %>% 
-  
   filter(sex == 'female') %>%
   
 ggplot( aes(x=homeownership, y=HHWT, fill=earner_type, weights = HHWT)) +
@@ -743,80 +358,53 @@ geom_bar(stat="identity", position=position_dodge())
 
 
 
-## 6c.single earner female vs single earner male vs multi eaners group by income_group
-# multi_vs_single_income <- lville_2019 %>%
-#   mutate(spec_earn_type = case_when(
-#     earner_type == 'multi_earner' ~ 'multi',
-#     earner_type == 'single_earner' & sex == 'female' ~ 'single_female_earner',
-#     earner_type == 'single_earner' & sex == 'male' ~ 'single_male_earner')) %>%
-#   
-#   group_by(spec_earn_type, income_group) %>%
-#   summarize(n=sum(HHWT, na.rm = TRUE)) %>%
-#   mutate(total = sum(n),percent = n/sum(n)
-#   )
-
-# ggplot(multi_vs_single_income,
-#        aes(x = spec_earn_type,
-#            y = percent,
-#            fill = income_group)) +
-#   geom_bar(position="dodge", stat="identity") + 
-#           scale_y_continuous(labels = scales::percent)
 ```
 
 
-_________________________________________________________________________________________________________________
-_________________________________________________________________________________________________________________
-_________________________________________________________________________________________________________________
+```{r, Single Female ownership by race}
 
-```{r, eval=FALSE}
-#histogram: Housing type in lville in 2019
-func_plt_hist_updated(lville_2019, lville_2019$hh_type)
+lville_2019 %>%
+    filter(sex == 'female',
+           earner_type == 'single_earner') %>%
+
+ggplot( aes(x=homeownership, y=HHWT, fill=race, weights = HHWT)) + 
+geom_bar(stat="identity", position=position_dodge())
 
 ```
 
-```{r, eval = FALSE}
-#histogram: female income by housing type
+# Education
 
-df <-
-  lville_2019 %>% 
-  filter(sex == 'female',
-         HHINCOME <= cut_95) 
+```{r, male vs female}
 
-func_plt_hist_updated(df, df$hh_type)
+lville_2019 %>%
+
+ggplot( aes(x=educ, y=HHWT, fill=sex, weights = HHWT)) + 
+geom_bar(stat="identity", position=position_dodge())
+
 ```
 
-```{r, eval=FALSE}
-#histogram: male income by housing type
+```{r, female by race }
 
-df <-
-  lville_2019 %>% 
-  filter(sex == 'male',
-         HHINCOME <= cut_95)
+q <- lville_2019 %>% 
+  filter(sex == 'female') %>%
+  group_by(race, educ) %>%
+  summarize(n=sum(HHWT, na.rm = TRUE)) %>%
+  mutate(total = sum(n),rate = n/sum(n)
+  )
 
-func_plt_hist_updated(df, df$hh_type)
-```
-
-```{r, eval=FALSE}
-#histogram: female single earner income by housing type
-df <-
-  lville_2019 %>% 
-  filter(sex == 'female',
-         earner_type == 'single_earner',
-         HHINCOME <= cut_95) 
-
-func_plt_hist_updated(df, df$hh_type) #look at degree type here as well
-```
+  ggplot(q, aes(x=race, y=rate, fill=educ)) + 
+  geom_bar(stat="identity", position=position_dodge())
 
 
-```{r, eval=FALSE}
-#histogram: female single earner income by housing type
-df <-
-  lville_2019 %>% 
-  filter(sex == 'male',
-         earner_type == 'single_earner',
-         HHINCOME <= cut_95) 
+# lville_2019 %>%
+#   filter(sex == 'female') %>%
+# 
+# ggplot( aes(x=educ, y=HHWT, fill=race, weights = HHWT)) + 
+# geom_bar(stat="identity", position=position_dodge())
 
-func_plt_hist_updated(df, df$hh_type)
 ```
 
 
+# Household Age
+
+# Mortgage Data
