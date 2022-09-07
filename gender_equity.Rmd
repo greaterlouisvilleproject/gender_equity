@@ -7,171 +7,27 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, dev.args=list(bg="transparent"))
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, 
+                      dev.args=list(bg="transparent"), fig.width=15, fig.height=12)
 
-library(tidyverse)
-library(sf)
-library(tidycensus)
-
-library(magrittr)
-library(arrow)
-
-library(ggplot2)
 library(glptools)
-library(stringr)
-
-```
-
-
-```{r prep_data, eval=FALSE, include=FALSE}
-#Skip
-census_data <- read_feather("../../glpdata/data-raw/microdata/acs_micro.feather")
-
-census_data %<>%
-  filter(FIPS == "21111")
-
-write_feather(census_data, "raw_data/census_data.feather")
-
-library(glpdata)
-
-save(population_tract, file = "raw_data/tract_population.RData")
-
-```
-
-# Housing data
-
-In this first chunk, let's read in the Census microdata. Here is some example code on how to read in the data, create new variables to categorize the rows of data into groups, and then summarize the data to create information about Louisville.
-
-Our goal is to create variables for gender, age group, whether someone is a mother, whether someone is married, their level of education, their income, whether they are the head of household, and the number of children they have.
-
-
-
-```{r read in new data, eval=FALSE, include=FALSE}
-#Skip - only use if changing the ACS file
-
-acs_micro_8_11_22 <- read_feather("raw_data/acs_micro_FIPS_repwts_8_11_22.feather") 
-
-acs_micro_8_11_22 %<>%
-  filter(FIPS == "21111")
-
-
-write_feather(acs_micro_8_11_22, "raw_data/census_data_8_11_22.feather")
-
-```
-
-
-```{r explore new data, include=FALSE}
-#Start
-#File for use below
-census_microdata081122 <- read_feather("raw_data/census_data_8_11_22.feather") 
-
-```
-This code chunk will identify which households are homeowners vs. renters (in the homeownership variable) and which households are cost-burdened, meaning they pay more thatn 30% of their income toward rent or a mortgage (in the cost_burden variable).
-
-There are also variables for severe cost burden (households that pay more than half of their income towards housing) and households with severe housing problems (lacking a kitchen, adequate plumbing, or an ample number of rooms for the number of people living there).
-```{r, include= FALSE}
-# To classify the housing data into homeowners, renters, cost-bu
-#also create income brackets, earner types
-
-census_microdata081122 %<>%
-  group_by(year, SERIAL) %>%
-  mutate(hh_members = n()) %>%
-  ungroup() %>%
-  filter(PERNUM == 1) %>%
-  mutate(
-    OWNCOST  = replace(OWNCOST, OWNCOST == 99999, NA),
-    HHINCOME = replace(HHINCOME, HHINCOME == 99999, NA),
-    OWNERSHP = replace(OWNERSHP, OWNERSHP == 0, NA),
-    RENTGRS  = replace(RENTGRS, RENTGRS == 0 & OWNERSHP == 1, NA),
-
-    homeownership = if_else(OWNERSHP == 1, T, F),
-
-    hcost = if_else(homeownership == 1, OWNCOST, RENTGRS),
-    cost_burden = if_else(hcost * 12 / HHINCOME > 0.3, T, F),
-    severe_cost_burden = if_else(hcost * 12 / HHINCOME > 0.5, 1, 0),
-
-    hh_type = case_when(
-      homeownership  & !cost_burden ~ "noncb_homeowner",
-      homeownership  & cost_burden  ~ "cb_homeowner",
-      !homeownership & !cost_burden ~ "noncb_renter",
-      !homeownership & cost_burden  ~ "cb_renter",
-      TRUE ~ NA_character_),
-    
-    KITCHEN  = replace(KITCHEN, KITCHEN == 0, NA),
-    ROOMS    = replace(ROOMS, ROOMS == 0, NA),
-    PLUMBING = replace(PLUMBING, PLUMBING == 0, NA),
-
-    severe_housing_problems = if_else(
-      KITCHEN == 1 | PLUMBING == 10 | hh_members / ROOMS > 1 | severe_cost_burden, T, F),
-    
-#income brackets based on HHINCOME
-  #LH-Lower half -> lower40% 
-  #UH-Upper Half -> 40th to 80th 
-  #T20 -> top 20th percentile
-
-    
-    income_group = case_when(
-      HHINCOME <= quantile(HHINCOME, probs = 0.4) ~ 'LH',
-      HHINCOME <= quantile(HHINCOME, probs = 0.8) ~ 'UH',
-      HHINCOME > quantile(HHINCOME, probs = 0.8) ~ 'T20',
-      TRUE ~ NA_character_),
-
-  earner_type = case_when(
-    HHINCOME == INCTOT ~ 'single_earner',
-    HHINCOME != INCTOT ~ 'multi_earner',
-    HHINCOME == 0 ~ 'no_earnings')
-)
-
-
-```
-
-
-For each category that we've come up with, we want to summarize the data by year, gender, the housing characteristics (like are they a homeowner or a renter?), and the other characteristics (like what is their income level?)
-
-
-year | gender | homeownership | cost_burden | mother | head_of_household
-
-``` {r, include = FALSE}
-#Louisville 2019 data
-
-lville_2019 <- census_microdata081122 %>% 
-  filter(year == '2019')
-
-```
-
-
-```{r,eval=FALSE, include=FALSE}
-
-### Household Structure
-#break data down by (1) marital status, (2) presence and number of children, and perhaps whether the (3) household is a three-generation household or includes other relatives.
-
-census_microdata %>% 
-  recode(MARST, 1='Married, with Spouse', 2 = 'Married, without Spouse',  3='Seperated',4='Divocred', 5='Widowed', 6= 'Single', .default = NA_character_),
-
-  recode(MULTGEN, 0 = NA_character_, 1 = 'one_gen', 2 = 'two_gen', 3 = 'three_gen_min', .default = NA_character_))
-
-# census_microdata %>% group_by(household_type) %>% summarize(n = n()) ### can also use this for multigen. just count obversations
-
-## Use NCHILD for number of children: Coded 0-9 with 9 indicating at least 9 children
-
-
-
-```
-
-```{r, include = FALSE}
-#Finding income ranges
+glp_load_packages(TRUE)
+library(arrow)
 library(viridis)
 library(forcats)
 library(hrbrthemes)
+library(glpdata)
 
-cut_95 = quantile(lville_2019$HHINCOME, probs = 0.95)
+
+showtext_auto()
+font_add("Museo Sans", "/Users/joshmarkwell/Desktop/Professional/GLP/MuseoSans_300.otf")
 
 ```
 
 
-```{r, include=FALSE}
+```{r Fucntions, include=FALSE}
 
-#Updated version of above function used to compare groups rather than same group over time
+#Function used to compare groups rather than same group over time
 func_plt_hist_updated <- function(data, var) {
   
   data$group <- data[[var]]
@@ -241,6 +97,136 @@ func_plt_dens_overlay <- function(data, var) {
 ```
 
 
+```{r prep_data, eval=FALSE, include=FALSE}
+#Skip
+census_data <- read_feather("../../glpdata/data-raw/microdata/acs_micro.feather")
+
+census_data %<>%
+  filter(FIPS == "21111")
+
+write_feather(census_data, "raw_data/census_data.feather")
+
+
+save(population_tract, file = "raw_data/tract_population.RData")
+
+```
+
+# Housing data
+
+In this first chunk, let's read in the Census microdata. Here is some example code on how to read in the data, create new variables to categorize the rows of data into groups, and then summarize the data to create information about Louisville.
+
+Our goal is to create variables for gender, age group, whether someone is a mother, whether someone is married, their level of education, their income, whether they are the head of household, and the number of children they have.
+
+
+
+```{r read in new data, eval=FALSE, include=FALSE}
+#Skip - only use if changing data to include
+
+acs_micro_8_11_22 <- read_feather("raw_data/acs_micro_FIPS_repwts_8_11_22.feather") 
+
+acs_micro_8_11_22 %<>%
+  filter(FIPS == "21111" | FIPS == '37081')
+
+
+write_feather(acs_micro_8_11_22, "raw_data/census_data_8_11_22.feather")
+
+```
+
+
+```{r explore new data, include=FALSE}
+#Start
+#File for use below
+census_microdata081122 <- read_feather("raw_data/census_data_8_11_22.feather") 
+
+```
+This code chunk will identify which households are homeowners vs. renters (in the homeownership variable) and which households are cost-burdened, meaning they pay more thatn 30% of their income toward rent or a mortgage (in the cost_burden variable).
+
+There are also variables for severe cost burden (households that pay more than half of their income towards housing) and households with severe housing problems (lacking a kitchen, adequate plumbing, or an ample number of rooms for the number of people living there).
+
+``` {r louisville 2019 data, include = FALSE}
+
+lville_2019 <- census_microdata081122 %>% 
+  filter(FIPS == '21111',
+         year == '2019')
+
+```
+
+
+
+```{r clean data, include= FALSE}
+# To classify the housing data into homeowners, renters, cost-bu
+#also create income brackets, earner types
+
+census_microdata081122 %<>%
+  group_by(year, SERIAL) %>%
+  mutate(hh_members = n()) %>%
+  ungroup() %>%
+  filter(PERNUM == 1) %>%
+  mutate(
+    OWNCOST  = replace(OWNCOST, OWNCOST == 99999, NA),
+    HHINCOME = replace(HHINCOME, HHINCOME == 99999, NA),
+    OWNERSHP = replace(OWNERSHP, OWNERSHP == 0, NA),
+    RENTGRS  = replace(RENTGRS, RENTGRS == 0 & OWNERSHP == 1, NA),
+
+    homeownership = if_else(OWNERSHP == 1, T, F),
+
+    hcost = if_else(homeownership == 1, OWNCOST, RENTGRS),
+    cost_burden = if_else(hcost * 12 / HHINCOME > 0.3, T, F),
+    severe_cost_burden = if_else(hcost * 12 / HHINCOME > 0.5, 1, 0),
+
+    hh_type = case_when(
+      homeownership  & !cost_burden ~ "noncb_homeowner",
+      homeownership  & cost_burden  ~ "cb_homeowner",
+      !homeownership & !cost_burden ~ "noncb_renter",
+      !homeownership & cost_burden  ~ "cb_renter",
+      TRUE ~ NA_character_),
+    
+    KITCHEN  = replace(KITCHEN, KITCHEN == 0, NA),
+    ROOMS    = replace(ROOMS, ROOMS == 0, NA),
+    PLUMBING = replace(PLUMBING, PLUMBING == 0, NA),
+
+    severe_housing_problems = if_else(
+      KITCHEN == 1 | PLUMBING == 10 | hh_members / ROOMS > 1 | severe_cost_burden, T, F),
+    
+#income brackets based on HHINCOME
+  #LH-Lower half -> lower40% 
+  #UH-Upper Half -> 40th to 80th 
+  #T20 -> top 20th percentile
+
+    
+    income_group = case_when(
+      HHINCOME <= quantile(HHINCOME, probs = 0.4) ~ 'LH',
+      HHINCOME <= quantile(HHINCOME, probs = 0.8) ~ 'UH',
+      HHINCOME > quantile(HHINCOME, probs = 0.8) ~ 'T20',
+      TRUE ~ NA_character_),
+
+  earner_type = case_when(
+    HHINCOME == INCTOT ~ 'single_earner',
+    HHINCOME != INCTOT ~ 'multi_earner',
+    HHINCOME == 0 ~ 'no_earnings')
+)
+
+
+```
+
+#Waffle Chart
+```{r Harrison, include=FALSE}
+
+
+```
+
+
+
+# # Graphs
+```{r, include = FALSE}
+#Finding income ranges
+
+#95th perc of income
+cut_95 = quantile(lville_2019$HHINCOME, probs = 0.95)
+
+```
+
+
 #Income
 ```{r}
 #Male vs. Female income
@@ -257,6 +243,14 @@ lville_2019 %>%
 
 ```{r}
 #Male vs. female income truncated, overlay - unclear to look at (try different colors first before diff type of viz)
+
+#################KEEP################
+
+##change to GLP colors
+##use the same colors for gender throughout (blue/orange)
+## create hit for each of the most three recent years -> just for verification...that there isnt anything weird
+## if feeling funky, use gganimate to create a gif of histograms from 2000 to 2019
+
 lville_2019 %>% 
   filter(HHINCOME <= cut_95) %>%
         func_plt_hist_overlay( "sex")
@@ -333,31 +327,45 @@ survey_by_demog(df, type = 'mean', "HHINCOME")
 
 ```
 
+
 # Homeownership
 ```{r, Male vs Female}
-
+#line graph over time
+#re-do with function from glptools
   
-p<-survey_by_demog(lville_2019, weight_var = "HHWT", 'homeownership') %>%
+p<-survey_by_demog(census_microdata081122, weight_var = "HHWT", 'homeownership') %>%
   filter(var_type == 'percent',
          race == 'total',
          sex != 'total')
-  
-ggplot(p, aes(x=sex, y=homeownership)) + 
-geom_bar(stat="identity", position=position_dodge())
+
+trend(p, homeownership, rollmean = 3, plot_title = "Homeownership by Year", cat = 'sex', y_title = 'Percent',
+       caption_text = "Source Greater Louisville Project
+      Data from GLP analysis of ACS microdata from IPUMS-USA"
+     )
+
+# ggplot(p, aes(x=year, y=homeownership, group=sex)) +
+#   geom_line(aes(linetype=sex))+
+#   geom_point(aes(shape=sex))
+
 
 ```
 
-
 ```{r, Single Female vs. Mult Inc Female}
 
-lville_2019 %>% 
+#try and make a trend line like the chunk above
+a <- census_microdata081122 %>% 
   filter(sex == 'female') %>%
+  select(-sex) %>%
+    mutate(homeownership = replace(homeownership, homeownership == T, 'Homeowner'),
+         homeownership = replace(homeownership, homeownership == F, 'Renter')) 
   
-ggplot( aes(x=homeownership, y=HHWT, fill=earner_type, weights = HHWT)) +
-geom_bar(stat="identity", position=position_dodge())
+trend(a, homeownership, rollmean = 3, plot_title = "Homeownership by Year", cat = 'earner_type')
+  
+# ggplot( aes(fill=earner_type, y=HHWT, x=homeownership)) + 
+#     geom_bar(position="stack", stat="identity")
 
-
-
+# ggplot( aes(fill=earner_type, y=HHWT, x=homeownership, weights = HHWT)) + 
+#     geom_bar(position="fill", stat="identity")
 ```
 
 
@@ -366,10 +374,17 @@ geom_bar(stat="identity", position=position_dodge())
 lville_2019 %>%
     filter(sex == 'female',
            earner_type == 'single_earner') %>%
+  mutate(homeownership = replace(homeownership, homeownership == T, 'Homeowner'),
+         homeownership = replace(homeownership, homeownership == F, 'Renter')) %>%
 
-ggplot( aes(x=homeownership, y=HHWT, fill=race, weights = HHWT)) + 
-geom_bar(stat="identity", position=position_dodge())
+# ggplot( aes(x=homeownership, y=HHWT, fill=race, weights = HHWT)) + 
+# geom_bar(stat="identity", position=position_dodge())
 
+  # ggplot( aes(fill=race, y=HHWT, x=homeownership, weights = HHWT)) + 
+  #   geom_bar(position="stack", stat="identity")
+  
+ggplot( aes(fill=race, y=HHWT, x=homeownership, weights = HHWT)) +
+    geom_bar(position="fill", stat="identity")
 ```
 
 # Education
@@ -378,29 +393,26 @@ geom_bar(stat="identity", position=position_dodge())
 
 lville_2019 %>%
 
-ggplot( aes(x=educ, y=HHWT, fill=sex, weights = HHWT)) + 
-geom_bar(stat="identity", position=position_dodge())
+ggplot( aes(x=race, y=HHWT, fill=educ, weights = HHWT)) + 
+geom_bar(stat="identity", position='fill')
 
 ```
 
 ```{r, female by race }
 
 q <- lville_2019 %>% 
-  filter(sex == 'female') %>%
+  filter(sex == 'female',
+         earner_type == 'single_earner') %>%
   group_by(race, educ) %>%
   summarize(n=sum(HHWT, na.rm = TRUE)) %>%
-  mutate(total = sum(n),rate = n/sum(n)
+  mutate(total = sum(n),
+         rate = n/sum(n)*100,
+         educ = factor(educ, levels = rev(c("no_hs", "hs", "some_col", "assoc", "bach","grad")), ordered = TRUE)
   )
 
   ggplot(q, aes(x=race, y=rate, fill=educ)) + 
-  geom_bar(stat="identity", position=position_dodge())
+  geom_bar(stat="identity", position='fill')
 
-
-# lville_2019 %>%
-#   filter(sex == 'female') %>%
-# 
-# ggplot( aes(x=educ, y=HHWT, fill=race, weights = HHWT)) + 
-# geom_bar(stat="identity", position=position_dodge())
 
 ```
 
