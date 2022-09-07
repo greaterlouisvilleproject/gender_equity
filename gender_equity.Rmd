@@ -25,77 +25,38 @@ font_add("Museo Sans", "/Users/joshmarkwell/Desktop/Professional/GLP/MuseoSans_3
 ```
 
 
-```{r Fucntions, include=FALSE}
-
-#Function used to compare groups rather than same group over time
-func_plt_hist_updated <- function(data, var) {
-  
-  data$group <- data[[var]]
-  # replace group param with var when fixing later
-  
-  p <- data %>% 
-  mutate(y = factor(group)) %>% #this might not be necessary
-  mutate(text = fct_reorder(y, HHINCOME)) %>%
-
-  
-  ggplot( aes(x=HHINCOME, color=text, fill=text, weight = HHWT)) +
-    geom_histogram(alpha=0.5, binwidth = 10000) +
-    #geom_vline(xintercept = cut_95, col = "red") +
-    scale_fill_viridis(discrete=TRUE) +
-    scale_color_viridis(discrete=TRUE) +
-    theme_ipsum() +
-    theme(
-      legend.position="none",
-      panel.spacing = unit(0.1, "lines"),
-      strip.text.x = element_text(size = 8)
-    ) +
-    xlab("Household Income") +
-    ylab("Count") +
-    facet_wrap(~text)
-    
-  return (p)
-}
-```
 
 ```{r, include=FALSE}
 #Overlayed histogram
 func_plt_hist_overlay <- function(data, var) {
 
   data$group <- data[[var]]
+  
+  possible_colors <- c("#0E4A99", "#F58021", "#00A9B7", "#800055", "#356E39", "#CFB94C", "#7E9C80")
+  number_I_need = length(unique(data$group))
+  these_colors <- possible_colors[1:number_I_need]
 
-  p <- data %>% ggplot( aes(x=HHINCOME, fill=group, weight = HHWT)) +
-    geom_histogram( color="#e9ecef", alpha=0.5, position = 'identity', binwidth = 10000 ) +
-    #geom_vline(xintercept = cut_95, col = "red") +
-    scale_fill_viridis(discrete=TRUE) +
-    scale_color_viridis(discrete=TRUE) +
-    theme_ipsum() +
-    labs(fill="")
+  p <- data %>% ggplot( aes(x=HHINCOME, fill=group, color = group, weight = HHWT)) +
+    geom_histogram( aes(y=(..count..)/sum(..count..)), 
+                   alpha=0.5, position = 'identity', binwidth = 10000 ) +
+    scale_fill_manual(values = these_colors) +
+    scale_color_manual(values = these_colors) +
+
+    labs(fill="") +
+    xlab("Household Income") +
+    ylab("Percentage") 
+    
   
   return (p)
   
+  
+      #geom_vline(xintercept = cut_95, col = "red") +
+    # scale_fill_viridis(discrete=TRUE) +
+    # scale_color_viridis(discrete=TRUE) +
+    # theme_ipsum() +
 }
   
 ```
-
-```{r, include=FALSE}
-#Overlay density plot
-func_plt_dens_overlay <- function(data, var) {
-
-  data$group <- data[[var]]
-
-  q <- data %>% ggplot( aes(x=HHINCOME, fill=group, weight = HHWT)) +
-    geom_density( color="#e9ecef", alpha=0.5, position = 'identity', binwidth = 10000 ) +
-    #geom_vline(xintercept = cut_95, col = "red") +
-    scale_fill_viridis(discrete=TRUE) +
-    scale_color_viridis(discrete=TRUE) +
-    theme_ipsum() +
-    labs(fill="")
-
-  return (q)
-}
-  
-```
-
 
 ```{r prep_data, eval=FALSE, include=FALSE}
 #Skip
@@ -142,15 +103,6 @@ census_microdata081122 <- read_feather("raw_data/census_data_8_11_22.feather")
 This code chunk will identify which households are homeowners vs. renters (in the homeownership variable) and which households are cost-burdened, meaning they pay more thatn 30% of their income toward rent or a mortgage (in the cost_burden variable).
 
 There are also variables for severe cost burden (households that pay more than half of their income towards housing) and households with severe housing problems (lacking a kitchen, adequate plumbing, or an ample number of rooms for the number of people living there).
-
-``` {r louisville 2019 data, include = FALSE}
-
-lville_2019 <- census_microdata081122 %>% 
-  filter(FIPS == '21111',
-         year == '2019')
-
-```
-
 
 
 ```{r clean data, include= FALSE}
@@ -203,11 +155,22 @@ census_microdata081122 %<>%
   earner_type = case_when(
     HHINCOME == INCTOT ~ 'single_earner',
     HHINCOME != INCTOT ~ 'multi_earner',
-    HHINCOME == 0 ~ 'no_earnings')
+    HHINCOME == 0 ~ 'no_earnings'),
+
+  kd_pres = if_else(NCHILD > 0, "kids", "no_kids")
 )
 
 
 ```
+
+``` {r louisville 2019 data, include = FALSE}
+
+lville_2019 <- census_microdata081122 %>% 
+  filter(FIPS == '21111',
+         year == '2019')
+
+```
+
 
 #Waffle Chart
 ```{r Harrison, include=FALSE}
@@ -215,9 +178,97 @@ census_microdata081122 %<>%
 
 ```
 
-
-
 # # Graphs
+
+# Homeownership
+
+```{r, Trend in Homeownership by Gender}
+
+H_gen_trend<-survey_by_demog(census_microdata081122, weight_var = "HHWT", 'homeownership') %>%
+  filter(var_type == 'percent',
+         race == 'total',
+         sex != 'total')
+
+trend(H_gen_trend, plot_title = "Homeownership by Year", cat = 'sex', y_title = 'Percent',
+       caption_text = "Source Greater Louisville Project
+      Data from GLP analysis of ACS microdata from IPUMS-USA"
+     )
+
+```
+
+```{r Ranking Single Female Homeownership}
+
+H_singFem_rank<- census_microdata081122 %>%
+
+  filter(year == '2019',
+    earner_type == 'single_earner')%>%
+  
+  survey_by_demog( weight_var = "HHWT", 'homeownership') %>%
+  filter(sex == 'total',
+         race == 'total',
+         var_type == 'percent')
+
+ranking(H_singFem_rank, 'homeownership')
+
+```
+
+```{r Ranking Single Female with Kids Homeownership}
+
+H_sinFem_kids <-census_microdata081122 %>%
+
+  filter(year == '2019',
+    earner_type == 'single_earner',
+    NCHILD > 0)%>%
+  
+  survey_by_demog( weight_var = "HHWT", 'homeownership') %>%
+  filter(sex == 'total',
+         race == 'total',
+         var_type == 'percent')
+
+ranking(H_sinFem_kids, 'homeownership')
+
+```
+
+```{r Trend in Homeownership by for Single Females with vs. without Kids}
+
+
+
+H_s_m_kids_trend <- survey_by_demog(census_microdata081122 ,weight_var = "HHWT", 'homeownership', other_grouping_vars = c("kd_pres")) %>%
+  filter(var_type == 'percent',
+         race == 'total',
+         sex != 'total') %>%
+  pivot_wider( names_from = 'kd_pres', values_from = 'homeownership')
+
+H_s_m_kids_trend %<>% filter(sex == "female") %>% select(-sex)
+
+trend(H_s_m_kids_trend, kids:no_kids, plot_title = "Female With Kids Homeownership by Year", 
+      cat = c("Kids Present" = "kids", "No Kids Present" = "no_kids"), y_title = 'Percent',
+       caption_text = "Source Greater Louisville Project
+      Data from GLP analysis of ACS microdata from IPUMS-USA"
+     )
+
+```
+
+```{r Trend in Female Homeownership by Race}
+
+
+H_Fem_race <- survey_by_demog(census_microdata081122 ,weight_var = "HHWT", 'homeownership') %>%
+  filter(var_type == 'percent',
+         race != 'total',
+         sex == 'total')
+
+trend(H_Fem_race, homeownership, plot_title = "Female With Kids Homeownership by Year", cat = 'race', y_title = 'Percent',
+       caption_text = "Source Greater Louisville Project
+      Data from GLP analysis of ACS microdata from IPUMS-USA"
+     )
+
+
+```
+
+
+
+#Income
+
 ```{r, include = FALSE}
 #Finding income ranges
 
@@ -227,180 +278,80 @@ cut_95 = quantile(lville_2019$HHINCOME, probs = 0.95)
 ```
 
 
-#Income
-```{r}
-#Male vs. Female income
-lville_2019 %>%
-  func_plt_hist_updated( "sex")
-```
-
-```{r}
-#Male vs. Female income truncated
-lville_2019 %>%
-  filter(HHINCOME <= cut_95) %>%
-  func_plt_hist_updated( "sex")
-```
-
-```{r}
-#Male vs. female income truncated, overlay - unclear to look at (try different colors first before diff type of viz)
+```{r 2019 Louisville Men and Women Income Compared}
 
 #################KEEP################
 
-##change to GLP colors
-##use the same colors for gender throughout (blue/orange)
-## create hit for each of the most three recent years -> just for verification...that there isnt anything weird
+## create hist for each of the most three recent years -> just for verification...that there isnt anything weird
 ## if feeling funky, use gganimate to create a gif of histograms from 2000 to 2019
-
 lville_2019 %>% 
   filter(HHINCOME <= cut_95) %>%
         func_plt_hist_overlay( "sex")
 ```
 
-```{r}
-#Single male vs. single female income, truncated
+```{r 2019 Louisville Single Female Income by Race}
 
 lville_2019 %>% 
-  filter(earner_type == 'single_earner',
-      HHINCOME <= cut_95) %>%
-        func_plt_hist_updated( "sex")
-```
-
-```{r}
-#Single male vs. single female income, truncated, overlay-> might incorporate 95th percentile for each group (i.e. single male 95th - do this outside of r)
-lville_2019 %>% 
-  filter(earner_type == 'single_earner',
-      HHINCOME <= cut_95) %>%
-        func_plt_hist_overlay( "sex")
-```
-
-```{r}
-#Female home-owners vs. female non-homeowners income
-lville_2019 %>%
-  filter(sex == 'female') %>%
-  mutate(homeownership = replace(homeownership, homeownership == T, 'Homeowner'),
-         homeownership = replace(homeownership, homeownership == F, 'Renter')) %>%
-    func_plt_hist_updated( "homeownership")
-
-```
-
-```{r}
-#Female home-owners vs. female non-homeowners income, overlay
-lville_2019 %>%
-  filter(sex == 'female') %>%
-  mutate(homeownership = replace(homeownership, homeownership == T, 'Homeowner'),
-         homeownership = replace(homeownership, homeownership == F, 'Non homeowner')) %>%
-    func_plt_hist_overlay( "homeownership")
-
-```
-
-```{r}
-#Female, Single home-owners vs. female, single, non-homeowners income
-lville_2019 %>%
   filter(sex == 'female',
-         earner_type == 'single_earner') %>%
-  mutate(homeownership = replace(homeownership, homeownership == T, 'Homeowner'),
-         homeownership = replace(homeownership, homeownership == F, 'Non homeowner')) %>%
-    func_plt_hist_updated( "homeownership")
+         earner_type == 'single_earner',
+    HHINCOME <= cut_95) %>%
+        func_plt_hist_overlay( "race")
 
 ```
 
-```{r}
-#race by income overlay, truncated - tested with overlayed density plot...right path but could display info better...ideally can make this graph interactive so ppl can select a specfic group and then can also select specific percentiles...create df using suvery by demog function
+```{r 2019 Louisville Cost of living Burden for Single Females - stacked histogram}
+##switch legend
+
+lville_2019 %>% 
+  filter(sex == 'female',
+         earner_type == 'single_earner',
+          HHINCOME <= cut_95) %>%
+  mutate(cost_burden = factor(cost_burden, levels = rev(c(TRUE, FALSE)), 
+                              labels = rev(c("Cost Burdened", "Non Cost Burdened")), ordered = TRUE) ) %>%
 
 
-census_microdata081122 %>% 
-  filter(year %in% 2017:2019,
-    sex == 'female',
-         HHINCOME <= cut_95) %>%
-        func_plt_dens_overlay( "race")
-
-```
-
-```{r, eval = FALSE}
-
-###come back to this...dont ignore it
-df <- census_microdata081122 %>% 
-  filter(year %in% 2017:2019,
-    sex == 'female') 
-
-survey_by_demog(df, type = 'mean', "HHINCOME")
+ggplot( aes(x=HHINCOME, fill = cost_burden), color="#00A9B7", alpha=0.5, position = "stack", binwidth = 10000) + 
+geom_histogram()
 
 ```
 
+```{r Cost-burdened by earner type Trend }
 
-# Homeownership
-```{r, Male vs Female}
-#line graph over time
-#re-do with function from glptools
-  
-p<-survey_by_demog(census_microdata081122, weight_var = "HHWT", 'homeownership') %>%
+I_CB_earn_trend <- survey_by_demog(census_microdata081122, weight_var = "HHWT", 'cost_burden', other_grouping_vars = c('earner_type')) %>%
   filter(var_type == 'percent',
          race == 'total',
          sex != 'total')
 
-trend(p, homeownership, rollmean = 3, plot_title = "Homeownership by Year", cat = 'sex', y_title = 'Percent',
+trend(I_CB_earn_trend, cost_burden, rollmean = 3, plot_title = "Homeownership by Year", cat = "earner_type", y_title = 'Percent',
        caption_text = "Source Greater Louisville Project
       Data from GLP analysis of ACS microdata from IPUMS-USA"
      )
 
-# ggplot(p, aes(x=year, y=homeownership, group=sex)) +
-#   geom_line(aes(linetype=sex))+
-#   geom_point(aes(shape=sex))
-
-
-```
-
-```{r, Single Female vs. Mult Inc Female}
-
-#try and make a trend line like the chunk above
-a <- census_microdata081122 %>% 
-  filter(sex == 'female') %>%
-  select(-sex) %>%
-    mutate(homeownership = replace(homeownership, homeownership == T, 'Homeowner'),
-         homeownership = replace(homeownership, homeownership == F, 'Renter')) 
-  
-trend(a, homeownership, rollmean = 3, plot_title = "Homeownership by Year", cat = 'earner_type')
-  
-# ggplot( aes(fill=earner_type, y=HHWT, x=homeownership)) + 
-#     geom_bar(position="stack", stat="identity")
-
-# ggplot( aes(fill=earner_type, y=HHWT, x=homeownership, weights = HHWT)) + 
-#     geom_bar(position="fill", stat="identity")
 ```
 
 
-```{r, Single Female ownership by race}
-
-lville_2019 %>%
-    filter(sex == 'female',
-           earner_type == 'single_earner') %>%
-  mutate(homeownership = replace(homeownership, homeownership == T, 'Homeowner'),
-         homeownership = replace(homeownership, homeownership == F, 'Renter')) %>%
-
-# ggplot( aes(x=homeownership, y=HHWT, fill=race, weights = HHWT)) + 
-# geom_bar(stat="identity", position=position_dodge())
-
-  # ggplot( aes(fill=race, y=HHWT, x=homeownership, weights = HHWT)) + 
-  #   geom_bar(position="stack", stat="identity")
-  
-ggplot( aes(fill=race, y=HHWT, x=homeownership, weights = HHWT)) +
-    geom_bar(position="fill", stat="identity")
-```
 
 # Education
 
-```{r, male vs female}
+```{r Education for Single Male Vs. Single Female}
 
-lville_2019 %>%
+E_singM_singF <- lville_2019 %>% 
+  filter(earner_type == 'single_earner') %>%
+  group_by(sex, educ) %>%
+  summarize(n=sum(HHWT, na.rm = TRUE)) %>%
+  mutate(total = sum(n),
+         rate = n/sum(n)*100,
+         educ = factor(educ, levels = rev(c("no_hs", "hs", "some_col", "assoc", "bach","grad")), ordered = TRUE)
+  )
 
-ggplot( aes(x=race, y=HHWT, fill=educ, weights = HHWT)) + 
-geom_bar(stat="identity", position='fill')
+  ggplot(E_singM_singF, aes(x=sex, y=rate, fill=educ)) + 
+  geom_bar(stat="identity", position='fill')
 
 ```
 
-```{r, female by race }
+```{r, Education of Single Female by race}
 
-q <- lville_2019 %>% 
+E_singF_race <- lville_2019 %>% 
   filter(sex == 'female',
          earner_type == 'single_earner') %>%
   group_by(race, educ) %>%
@@ -410,7 +361,7 @@ q <- lville_2019 %>%
          educ = factor(educ, levels = rev(c("no_hs", "hs", "some_col", "assoc", "bach","grad")), ordered = TRUE)
   )
 
-  ggplot(q, aes(x=race, y=rate, fill=educ)) + 
+  ggplot(E_singF_race, aes(x=race, y=rate, fill=educ)) + 
   geom_bar(stat="identity", position='fill')
 
 
