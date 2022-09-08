@@ -49,18 +49,18 @@ func_plt_hist_overlay <- function(data, var) {
   
   return (p)
   
-  
-      #geom_vline(xintercept = cut_95, col = "red") +
-    # scale_fill_viridis(discrete=TRUE) +
-    # scale_color_viridis(discrete=TRUE) +
-    # theme_ipsum() +
 }
   
 ```
 
 ```{r prep_data, eval=FALSE, include=FALSE}
 #Skip
-census_data <- read_feather("../../glpdata/data-raw/microdata/acs_micro.feather")
+# Harrison
+#census_data <- read_feather("../../glpdata/data-raw/microdata/acs_micro.feather")
+
+#Josh
+#census_data <- read_feather("/Users/joshmarkwell/Desktop/Professional/GLP/projects/gender_equity/raw_data/acs_micro_repwts.feather")
+
 
 census_data %<>%
   filter(FIPS == "21111")
@@ -83,13 +83,13 @@ Our goal is to create variables for gender, age group, whether someone is a moth
 ```{r read in new data, eval=FALSE, include=FALSE}
 #Skip - only use if changing data to include
 
-acs_micro_8_11_22 <- read_feather("raw_data/acs_micro_FIPS_repwts_8_11_22.feather") 
+#acs_micro_8_11_22 <- read_feather("raw_data/acs_micro_FIPS_repwts_8_11_22.feather") 
 
-acs_micro_8_11_22 %<>%
+census_data %<>%
   filter(FIPS == "21111" | FIPS == '37081')
 
 
-write_feather(acs_micro_8_11_22, "raw_data/census_data_8_11_22.feather")
+write_feather(census_data, "raw_data/census_data_8_11_22.feather")
 
 ```
 
@@ -157,7 +157,12 @@ census_microdata081122 %<>%
     HHINCOME != INCTOT ~ 'multi_earner',
     HHINCOME == 0 ~ 'no_earnings'),
 
-  kd_pres = if_else(NCHILD > 0, "kids", "no_kids")
+  kd_pres = if_else(NCHILD > 0, "kids", "no_kids"), 
+
+    male_fem_mult_earn = case_when(
+      sex == 'female' & earner_type == 'single_earner' ~ 'single_fem_earner',
+      sex == 'male' & earner_type == 'single_earner' ~ 'single_male_earner',
+      earner_type == 'multi_earner' ~ 'multiple_earner') 
 )
 
 
@@ -178,11 +183,10 @@ lville_2019 <- census_microdata081122 %>%
 
 ```
 
-# # Graphs
 
 # Homeownership
 
-```{r, Trend in Homeownership by Gender}
+```{r Trend in Homeownership by Gender}
 
 H_gen_trend<-survey_by_demog(census_microdata081122, weight_var = "HHWT", 'homeownership')
 
@@ -299,6 +303,9 @@ cut_95 = quantile(lville_2019$HHINCOME, probs = 0.95)
 
 ## create hist for each of the most three recent years -> just for verification...that there isnt anything weird
 ## if feeling funky, use gganimate to create a gif of histograms from 2000 to 2019
+
+#facet this
+
 lville_2019 %>% 
   filter(HHINCOME <= cut_95) %>%
         func_plt_hist_overlay( "sex")
@@ -316,7 +323,6 @@ lville_2019 %>%
 ```
 
 ```{r 2019 Louisville Cost of living Burden for Single Females - stacked histogram}
-##switch legend
 
 cost_burden_sf <- lville_2019 %>% 
   filter(
@@ -341,18 +347,21 @@ geom_histogram()
 
 ```{r Cost-burdened by earner type Trend }
 
-I_CB_earn_trend <- survey_by_demog(census_microdata081122, weight_var = "HHWT", 'cost_burden', other_grouping_vars = c('earner_type'))
+I_CB_earn_trend <- survey_by_demog(census_microdata081122, weight_var = "HHWT", 'cost_burden', other_grouping_vars = c('earner_type'), breakdowns = "sex")
 
 I_CB_earn_trend %<>%
   filter(
     var_type == 'percent',
     race == 'total',
-    sex != 'total')
+    sex == 'female') %>%
+  select(-sex) %>%
+  pivot_wider(names_from = "earner_type", values_from = "cost_burden")
+  
 
 trend(I_CB_earn_trend, 
-      cost_burden, 
+      multi_earner:single_earner, 
       plot_title = "Homeownership by Year", 
-      cat = "earner_type", 
+      cat = c("Multi Earner" = "multi_earner", "Single Earner" = "single_earner"), 
       y_title = 'Percent',
       caption_text = 
       "Source Greater Louisville Project
@@ -405,5 +414,71 @@ geom_bar(stat="identity", position='fill')
 
 
 # Household Age
+```{r Cost Burdened Status by Age}
+
+#Stacked histogram
+
+cost_burden_age_sf <- census_microdata081122 %>% 
+    filter(year %in% 2010:2019) %>%
+  mutate(
+    cost_burden = factor(cost_burden, 
+                         levels = rev(c(TRUE, FALSE)), 
+                         labels = rev(c("Cost Burdened", "Non Cost Burdened")), 
+                         ordered = TRUE),
+    
+    age_group = case_when(
+      age %in% 15:19 ~ NA_character_, age %in% 20:29 ~ "20 - 29", 
+      age %in%  30:39 ~ "30 - 39",  age %in% 40:49 ~ "40 - 49",  age %in% 50:59 ~ "50 - 59",  age %in% 60:69 ~ "60 - 69", 
+      age %in% 70:79 ~ "70 - 79", age >= 80 ~ "80 + "
+    )
+    
+    # male_fem_mult_earn = case_when(
+    #   sex == 'female' & earner_type == 'single_earner' ~ 'single_fem_earner',
+    #   sex == 'male' & earner_type == 'single_earner' ~ 'single_male_earner',
+    #   earner_type == 'multi_earner' ~ 'multiple_earner')
+    )
+
+ggplot(cost_burden_age_sf,
+       aes(x=age_group, y=HHWT , fill=cost_burden),
+        color="#00A9B7") +
+geom_bar(stat="identity", position='fill')
+
+
+##Remove NA values from cost_burden_age_sf dataframe
+```
+
+```{r  Cost Burdened Stage by Age/Race}
+
+ggplot(cost_burden_age_sf,
+       aes(x=age_group, y=HHWT , fill=cost_burden),
+        color="#00A9B7") +
+geom_bar(stat="identity", position='fill')+
+facet_wrap(~male_fem_mult_earn)
+
+```
+
+# Earner Types Over Time
+```{r Proportion of Earner Types over time}
+
+earner_trend <- census_microdata081122 %>%
+  
+  mutate(
+    male_fem_mult_earn = case_when(
+      sex == 'female' & earner_type == 'single_earner' ~ 'single_fem_earner',
+      sex == 'male' & earner_type == 'single_earner' ~ 'single_male_earner',
+      earner_type == 'multi_earner' ~ 'multiple_earner')
+  ) %>% 
+  group_by(year, male_fem_mult_earn) %>%
+  summarize(n=sum(HHWT, na.rm = TRUE)) %>%
+  mutate(
+    total = sum(n),
+    rate = n/sum(n)*100) 
+  
+ggplot(earner_trend, 
+       aes(x=year, y=rate, fill=male_fem_mult_earn),
+        color="#00A9B7") + 
+geom_bar(stat="identity", position='fill')
+```
+
 
 # Mortgage Data
