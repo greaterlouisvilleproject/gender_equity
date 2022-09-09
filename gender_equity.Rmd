@@ -170,7 +170,11 @@ census_microdata081122 %<>%
       age %in%  30:39 ~ "30 - 39",  age %in% 40:49 ~ "40 - 49",  age %in% 50:59 ~ "50 - 59",  age %in% 60:69 ~ "60 - 69", age %in% 70:79 ~ "70 - 79", age >= 80 ~ "80 + ") 
 )
 
-census_microdata081122 %<>% drop_na(age_group)
+census_microdata081122 %<>% filter(!is.na(age_group))
+  
+  
+  # drop_na(age_group) 
+  # age_group == NA_character
 
 ```
 
@@ -179,6 +183,54 @@ census_microdata081122 %<>% drop_na(age_group)
 lville_2019 <- census_microdata081122 %>% 
   filter(FIPS == '21111',
          year == '2019')
+
+```
+
+```{r Saves Survey By Demographic Data Frames}
+
+## SKIP ##
+H_gen_trend<-survey_by_demog(census_microdata081122, weight_var = "HHWT", 'homeownership')
+
+H_singFem_rank <- census_microdata081122 %>%
+  filter(
+    year == '2019',
+    earner_type == 'single_earner') %>%
+  survey_by_demog('homeownership', weight_var = "HHWT") %>%
+  filter(
+    sex == 'total',
+    race == 'total',
+    var_type == 'percent')
+
+
+H_sinFem_kids <-census_microdata081122 %>%
+  filter(
+    year == '2019',
+    earner_type == 'single_earner',
+    NCHILD > 0) %>%
+  survey_by_demog('homeownership', weight_var = "HHWT") %>%
+  filter(
+    sex == 'total',
+    race == 'total',
+    var_type == 'percent')
+
+
+H_s_m_kids_trend <- survey_by_demog(census_microdata081122 ,weight_var = "HHWT", 'homeownership', other_grouping_vars = c("kd_pres"))
+
+H_Fem_race <- survey_by_demog(census_microdata081122 ,weight_var = "HHWT", 'homeownership')
+
+I_CB_earn_trend <- survey_by_demog(census_microdata081122, weight_var = "HHWT", 'cost_burden', other_grouping_vars = c('earner_type'), breakdowns = "sex")
+
+save(H_gen_trend, H_singFem_rank, H_sinFem_kids, H_s_m_kids_trend, H_Fem_race, I_CB_earn_trend,
+     file = "clean_svybydemog_data.RData")
+
+
+
+```
+
+```{r}
+
+load("clean_svybydemog_data.RData")
+
 
 ```
 
@@ -194,7 +246,7 @@ lville_2019 <- census_microdata081122 %>%
 
 ```{r Trend in Homeownership by Gender}
 
-H_gen_trend<-survey_by_demog(census_microdata081122, weight_var = "HHWT", 'homeownership')
+#H_gen_trend<-survey_by_demog(census_microdata081122, weight_var = "HHWT", 'homeownership')
 
 H_gen_trend %<>%
   filter(
@@ -215,15 +267,15 @@ trend(H_gen_trend,
 
 ```{r Ranking Single Female Homeownership}
 
-H_singFem_rank <- census_microdata081122 %>%
-  filter(
-    year == '2019',
-    earner_type == 'single_earner') %>%
-  survey_by_demog('homeownership', weight_var = "HHWT") %>%
-  filter(
-    sex == 'total',
-    race == 'total',
-    var_type == 'percent')
+# H_singFem_rank <- census_microdata081122 %>%
+#   filter(
+#     year == '2019',
+#     earner_type == 'single_earner') %>%
+#   survey_by_demog('homeownership', weight_var = "HHWT") %>%
+#   filter(
+#     sex == 'total',
+#     race == 'total',
+#     var_type == 'percent')
 
 ranking(H_singFem_rank, 'homeownership')
 
@@ -231,16 +283,16 @@ ranking(H_singFem_rank, 'homeownership')
 
 ```{r Ranking Single Female with Kids Homeownership}
 
-H_sinFem_kids <-census_microdata081122 %>%
-  filter(
-    year == '2019',
-    earner_type == 'single_earner',
-    NCHILD > 0) %>%
-  survey_by_demog('homeownership', weight_var = "HHWT") %>%
-  filter(
-    sex == 'total',
-    race == 'total',
-    var_type == 'percent')
+# H_sinFem_kids <-census_microdata081122 %>%
+#   filter(
+#     year == '2019',
+#     earner_type == 'single_earner',
+#     NCHILD > 0) %>%
+#   survey_by_demog('homeownership', weight_var = "HHWT") %>%
+#   filter(
+#     sex == 'total',
+#     race == 'total',
+#     var_type == 'percent')
 
 ranking(H_sinFem_kids, 'homeownership')
 
@@ -248,7 +300,7 @@ ranking(H_sinFem_kids, 'homeownership')
 
 ```{r Trend in Homeownership by for Single Females with vs. without Kids}
 
-H_s_m_kids_trend <- survey_by_demog(census_microdata081122 ,weight_var = "HHWT", 'homeownership', other_grouping_vars = c("kd_pres"))
+# H_s_m_kids_trend <- survey_by_demog(census_microdata081122 ,weight_var = "HHWT", 'homeownership', other_grouping_vars = c("kd_pres"))
   
 H_s_m_kids_trend %<>%
   filter(
@@ -271,7 +323,7 @@ trend(H_s_m_kids_trend,
 
 ```{r Trend in Female Homeownership by Race}
 
-H_Fem_race <- survey_by_demog(census_microdata081122 ,weight_var = "HHWT", 'homeownership')
+# H_Fem_race <- survey_by_demog(census_microdata081122 ,weight_var = "HHWT", 'homeownership')
 
 H_Fem_race %<>%
   filter(
@@ -353,7 +405,7 @@ geom_histogram()
 
 ```{r Cost-burdened by earner type Trend }
 
-I_CB_earn_trend <- survey_by_demog(census_microdata081122, weight_var = "HHWT", 'cost_burden', other_grouping_vars = c('earner_type'), breakdowns = "sex")
+# I_CB_earn_trend <- survey_by_demog(census_microdata081122, weight_var = "HHWT", 'cost_burden', other_grouping_vars = c('earner_type'), breakdowns = "sex")
 
 I_CB_earn_trend %<>%
   filter(
@@ -389,6 +441,7 @@ ggplot(I_median_earn_age,
 
 ```{r Variation of Graph Above}
 
+#Do not use
 ggplot(I_median_earn_age, 
        aes(x=age_group, y=Med, fill = male_fem_mult_earn)) + 
   geom_bar(stat="identity", position='fill')
