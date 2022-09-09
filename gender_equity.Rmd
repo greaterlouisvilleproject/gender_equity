@@ -38,8 +38,7 @@ func_plt_hist_overlay <- function(data, var) {
   these_colors <- possible_colors[1:number_I_need]
 
   p <- data %>% ggplot( aes(x=HHINCOME, fill=group, color = group, weight = HHWT)) +
-    geom_histogram( aes(y=(..count..)/sum(..count..)), 
-                   alpha=0.5, position = 'identity', binwidth = 10000 ) +
+    geom_histogram(alpha=0.5, position = 'identity', binwidth = 10000 ) +
     scale_fill_manual(values = these_colors) +
     scale_color_manual(values = these_colors) +
 
@@ -51,13 +50,48 @@ func_plt_hist_overlay <- function(data, var) {
   return (p)
   
 }
+
+glp_graph_theme <- theme_bw(
+    base_size = 11,
+    base_family = "Museo Sans")
+
+glp_graph_theme <- glp_graph_theme +
+  theme(
+    legend.title     = element_blank(),
+    legend.position  = "top",
+    legend.margin    = margin(t = 10, unit = "pt"),
+    legend.spacing.x = unit(30, "pt"),
+    legend.text      = element_text(size = 40,
+                                    margin = margin(b = 15, t = 15, unit = "pt")),
+
+    axis.text    = element_text(size = 50),
+    axis.title   = element_text(size = 60),
+    axis.title.x = element_text(margin = margin(t = 15, unit = "pt")),
+    axis.title.y = element_text(margin = margin(r = 15, unit = "pt")),
+
+    plot.title = element_text(size = 90,
+                              hjust = .5,
+                              margin = margin(b = 25, unit = "pt")),
+
+    plot.caption = element_text(size = 40,
+                                lineheight = 0.5)) +
+    theme(
+      panel.background = element_rect(fill = "transparent", color = NA), # bg of the panel
+      plot.background = element_rect(fill = "transparent", color = NA), # bg of the plot
+      legend.background = element_rect(fill = "transparent", color = "transparent"), # get rid of legend bg
+      legend.box.background = element_rect(fill = "transparent", color = "transparent"), # get rid of legend panel bg
+      legend.key = element_rect(fill = "transparent",colour = NA)
+    )
   
+      # theme(plot.subtitle = element_text(hjust = 0.5, size = 50)) +
+      # labs(subtitle = subtitle_text)
+
 ```
 
 ```{r prep_data, eval=FALSE, include=FALSE}
 #Skip
 # Harrison
-#census_data <- read_feather("../../glpdata/data-raw/microdata/acs_micro.feather")
+#census_data <- read_feather("../../glpdata/data-raw/microdata/acs_micro_repwts.feather")
 
 #Josh
 #census_data <- read_feather("/Users/joshmarkwell/Desktop/Professional/GLP/projects/gender_equity/raw_data/acs_micro_repwts.feather")
@@ -186,7 +220,7 @@ lville_2019 <- census_microdata081122 %>%
 
 ```
 
-```{r Saves Survey By Demographic Data Frames}
+```{r Saves Survey By Demographic Data Frames, eval=FALSE}
 
 ## SKIP ##
 H_gen_trend<-survey_by_demog(census_microdata081122, weight_var = "HHWT", 'homeownership')
@@ -228,17 +262,106 @@ save(H_gen_trend, H_singFem_rank, H_sinFem_kids, H_s_m_kids_trend, H_Fem_race, I
 ```
 
 ```{r}
-
 load("clean_svybydemog_data.RData")
-
-
 ```
 
 
 #Waffle Chart
-```{r Harrison, include=FALSE}
+```{r Harrison, eval=FALSE, include=FALSE}
+
+waffle_data <- survey_by_demog(lville_2019, "hh_type", other_grouping_vars = c("kd_pres", "earner_type"))
+
+gender <- waffle_data %>%
+  filter(
+    race == "total",
+    sex != "total",
+    var_type == "population") %>%
+  group_by(sex) %>%
+  summarize(n = sum(cb_homeowner), .groups = "drop") %>%
+  mutate(pct = n / sum(n) * 100)
+
+earn_type <- waffle_data %>%
+  filter(
+    race == "total",
+    sex != "total",
+    var_type == "population") %>%
+  group_by(sex, earner_type)  %>%
+  summarize(n = sum(cb_homeowner), .groups = "drop") %>%
+  mutate(pct = n / sum(n) * 100)
+  
+demog_data <- data.frame(
+  row_num = rep(1:10, each = 10),
+  col_num = rep(10:1, 10),
+  gender = c(rep("male", 52), rep("female", 48)),
+  earn_type = c(rep("multi_earn", 28), rep("single_earn", 20), rep("multi_earn", 29), rep("single_earn", 23)))
+
+g1 <- ggplot(demog_data, aes(x = row_num, y = col_num, color = gender)) + 
+  geom_point(size = 10) 
+
+g2 <- ggplot(demog_data, aes(x = row_num, y = col_num, color = earn_type)) + 
+  geom_point(size = 10) 
 
 
+library(shiny)
+library(scrollytell)
+library(shinyjs)
+library(ggvis)
+library(plotly)
+
+ui <- fluidPage(
+
+    # Application title
+    titlePanel("Scrolly Telling"),
+    sidebarLayout( sidebarPanel("Hi"),
+    tabsetPanel(
+      id="tab",
+      tabPanel("bla",
+            fluidRow(h2("Hi")),
+            fluidRow(
+        scrolly_container("scr"
+             , scrolly_graph( textOutput("section"),
+                              plotOutput("distPlot")
+
+                            )
+             , scrolly_sections(
+                scrolly_section( id = "green",
+                     sliderInput("bins", "Number of bins:", min = 1, max = 50, value = 30)
+                ),
+                scrolly_section(id = "red",
+                    h3("Title"),
+                    p("dit is een paragraaf, die de grafiek rood maakt")
+                ),
+                scrolly_section(id = "blue","Blauw"),
+                scrolly_section(id = "pink","Rose"),
+                scrolly_section(id = "purple","Paars"),
+                scrolly_section(id = "orange","Oranje boven!")
+             )
+        )
+            ))
+      )
+    ),
+    div("Footer")
+)
+
+# Define server logic required to draw a histogram
+server <- function(input, output) {
+
+    output$distPlot <- renderPlot({
+        # generate bins based on input$bins from ui.R
+        x    <- faithful[, 2]
+        bins <- seq(min(x), max(x), length.out = input$bins + 1)
+        col <- input$scr
+        # draw the histogram with the specified number of bins
+        hist(x, breaks = bins, col = col, border = 'white')
+    })
+
+    output$scr <- renderScrollytell({scrollytell()})
+    output$section <- renderText(paste0("Section: ", input$scr))
+
+    observe({cat("section:", input$scr, "\n")})
+}
+
+shinyApp(ui, server, options = list(height = 500))
 ```
 
 
@@ -362,14 +485,39 @@ cut_95 = quantile(lville_2019$HHINCOME, probs = 0.95)
 ## create hist for each of the most three recent years -> just for verification...that there isnt anything weird
 ## if feeling funky, use gganimate to create a gif of histograms from 2000 to 2019
 
-#facet this
+#TO DO:
+# facet this vertically
+# Change the x-axis to a dollar format (see trendline function in trendline_helpers.R)
+# Label the x-axis on every $50,000?
+# Let's use counts on the y-axis for the male and female graph
+# Format the y-axis with commas
+# remove legend?
 
-lville_2019 %>% 
+
+p <- lville_2019 %>% 
   filter(HHINCOME <= cut_95) %>%
-        func_plt_hist_overlay( "sex")
+  func_plt_hist_overlay( "sex")
+
+p <- p + glp_graph_theme
+
+p <- p + labs(
+  title = "Male Single Earner vs Female Single Earner"
+)
+
+p <- p + guides(color = FALSE)
+
+p <- p + facet_wrap(~sex, nrow = 2) 
+
+p 
+
 ```
 
 ```{r 2019 Louisville Single Female Income by Race}
+
+# TO DO
+# facet this into four panels
+# Either check that the y-axis become independent to get more info around other groups OR change the data from counts to percentages
+
 
 lville_2019 %>% 
   filter(
@@ -381,6 +529,11 @@ lville_2019 %>%
 ```
 
 ```{r 2019 Louisville Cost of living Burden for Single Females - stacked histogram}
+
+# TO DO
+# see above for x and y axis to-dos
+# Drop the legend title (see )
+
 
 cost_burden_sf <- lville_2019 %>% 
   filter(
