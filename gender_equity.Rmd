@@ -1,9 +1,10 @@
 ---
 title: "Gender Equity Dashboard"
-output: html_document
-    # toc: true
-    # toc_float: true
-    # code_folding: hide
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
@@ -162,9 +163,14 @@ census_microdata081122 %<>%
     male_fem_mult_earn = case_when(
       sex == 'female' & earner_type == 'single_earner' ~ 'single_fem_earner',
       sex == 'male' & earner_type == 'single_earner' ~ 'single_male_earner',
-      earner_type == 'multi_earner' ~ 'multiple_earner') 
+      earner_type == 'multi_earner' ~ 'multiple_earner') ,
+
+    age_group = case_when(
+      age %in% 15:19 ~ NA_character_, age %in% 20:29 ~ "20 - 29", 
+      age %in%  30:39 ~ "30 - 39",  age %in% 40:49 ~ "40 - 49",  age %in% 50:59 ~ "50 - 59",  age %in% 60:69 ~ "60 - 69", age %in% 70:79 ~ "70 - 79", age >= 80 ~ "80 + ") 
 )
 
+census_microdata081122 %<>% drop_na(age_group)
 
 ```
 
@@ -369,6 +375,25 @@ trend(I_CB_earn_trend,
 
 ```
 
+```{r Median Income for Earning Group by Age}
+
+I_median_earn_age <- lville_2019 %>%
+  group_by(age_group, male_fem_mult_earn) %>%
+  summarize(Med=median(HHINCOME)) 
+
+ggplot(I_median_earn_age, 
+       aes(x=age_group, y=Med, fill = male_fem_mult_earn)) + 
+  geom_bar(stat="identity", position='dodge')
+
+```
+
+```{r Variation of Graph Above}
+
+ggplot(I_median_earn_age, 
+       aes(x=age_group, y=Med, fill = male_fem_mult_earn)) + 
+  geom_bar(stat="identity", position='fill')
+
+```
 
 
 # Education
@@ -424,19 +449,9 @@ cost_burden_age_sf <- census_microdata081122 %>%
     cost_burden = factor(cost_burden, 
                          levels = rev(c(TRUE, FALSE)), 
                          labels = rev(c("Cost Burdened", "Non Cost Burdened")), 
-                         ordered = TRUE),
-    
-    age_group = case_when(
-      age %in% 15:19 ~ NA_character_, age %in% 20:29 ~ "20 - 29", 
-      age %in%  30:39 ~ "30 - 39",  age %in% 40:49 ~ "40 - 49",  age %in% 50:59 ~ "50 - 59",  age %in% 60:69 ~ "60 - 69", 
-      age %in% 70:79 ~ "70 - 79", age >= 80 ~ "80 + "
+                         ordered = TRUE)
     )
-    
-    # male_fem_mult_earn = case_when(
-    #   sex == 'female' & earner_type == 'single_earner' ~ 'single_fem_earner',
-    #   sex == 'male' & earner_type == 'single_earner' ~ 'single_male_earner',
-    #   earner_type == 'multi_earner' ~ 'multiple_earner')
-    )
+
 
 ggplot(cost_burden_age_sf,
        aes(x=age_group, y=HHWT , fill=cost_burden),
@@ -444,7 +459,6 @@ ggplot(cost_burden_age_sf,
 geom_bar(stat="identity", position='fill')
 
 
-##Remove NA values from cost_burden_age_sf dataframe
 ```
 
 ```{r  Cost Burdened Stage by Age/Race}
