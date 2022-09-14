@@ -200,8 +200,14 @@ census_microdata081122 %<>%
       earner_type == 'multi_earner' ~ 'multiple_earner') ,
 
     age_group = case_when(
-      age %in% 15:19 ~ NA_character_, age %in% 20:29 ~ "20 - 29", 
-      age %in%  30:39 ~ "30 - 39",  age %in% 40:49 ~ "40 - 49",  age %in% 50:59 ~ "50 - 59",  age %in% 60:69 ~ "60 - 69", age %in% 70:79 ~ "70 - 79", age >= 80 ~ "80 + ") 
+      age %in% 15:19 ~ NA_character_, 
+      age %in% 20:29 ~ "20-29", 
+      age %in% 30:39 ~ "30-39",  
+      age %in% 40:49 ~ "40-49",  
+      age %in% 50:59 ~ "50-59",  
+      age %in% 60:69 ~ "60-69", 
+      age %in% 70:79 ~ "70-79", 
+      age >= 80 ~ "80+") 
 )
 
 census_microdata081122 %<>% filter(!is.na(age_group))
@@ -214,12 +220,35 @@ lville_2019 <- census_microdata081122 %>%
   filter(FIPS == '21111',
          year == '2019')
 
+cost_burden_age_sf <- census_microdata081122 %>% 
+    filter(year %in% 2017:2019) %>%
+  mutate(
+    cost_burden = factor(cost_burden, 
+                         levels = rev(c(TRUE, FALSE)), 
+                         labels = rev(c("Cost Burdened", "Non Cost Burdened")), 
+                         ordered = TRUE)
+    )
+
+
 ```
 
 ```{r Saves Survey By Demographic Data Frames, include=FALSE, eval=FALSE}
 
 ## SKIP ##
-H_gen_trend<-survey_by_demog(census_microdata081122, weight_var = "HHWT", 'homeownership')
+H_gen_trend <- survey_by_demog(census_microdata081122, weight_var = "HHWT", 'homeownership')
+
+H_earntype_race <- census_microdata081122 %>%
+  group_by(FIPS, year, race, male_fem_mult_earn) %>%
+  summarize(homeownership = sum(HHWT[homeownership]) / sum(HHWT) * 100, .groups = "drop")
+
+H_earntype  <- census_microdata081122 %>%
+  group_by(FIPS, year, male_fem_mult_earn) %>%
+  summarize(homeownership = sum(HHWT[homeownership]) / sum(HHWT) * 100, .groups = "drop") %>%
+  mutate(race = "total")
+
+H_earntype %<>%
+  bind_rows(H_earntype_race) %>%
+  select(FIPS, year, race, male_fem_mult_earn, homeownership)
 
 H_singFem_rank <- census_microdata081122 %>%
   filter(
@@ -248,25 +277,18 @@ H_s_Femkids_trend <- census_microdata081122 %>%
                     filter(earner_type == 'single_earner') %>%
   survey_by_demog( weight_var = "HHWT", 'homeownership', other_grouping_vars = c("kd_pres"))
 
-H_Fem_race <- census_microdata081122 %>%
-  filter(sex == 'female') %>%
+H_s_Fem_trend <- census_microdata081122 %>%
+                    filter(earner_type == 'single_earner') %>%
   survey_by_demog( weight_var = "HHWT", 'homeownership')
 
 I_CB_earn_trend <- survey_by_demog(census_microdata081122, weight_var = "HHWT", 'cost_burden', other_grouping_vars = c('male_fem_mult_earn'))
 
-cost_burden_age_sf <- census_microdata081122 %>% 
-    filter(year %in% 2010:2019) %>%
-  mutate(
-    cost_burden = factor(cost_burden, 
-                         levels = rev(c(TRUE, FALSE)), 
-                         labels = rev(c("Cost Burdened", "Non Cost Burdened")), 
-                         ordered = TRUE)
-    )
+H_earntype <- survey_by_demog(census_microdata081122, 
+                              weight_var = "HHWT", 
+                              'homeownership', 
+                              other_grouping_vars = c('male_fem_mult_earn'))
 
-save(H_gen_trend, H_singFem_rank, H_sinFem_kids, H_s_Femkids_trend, H_Fem_race, I_CB_earn_trend, cost_burden_age_sf, lville_2019,
-     file = "clean_svybydemog_data.RData")
-
-
+save(H_gen_trend, H_earntype, H_singFem_rank, H_sinFem_kids, H_s_Femkids_trend, H_Fem_race, I_CB_earn_trend, file = "clean_svybydemog_data.RData")
 
 ```
 
@@ -375,26 +397,30 @@ shinyApp(ui, server, options = list(height = 500))
 
 # Homeownership
 
+## Trends in Homeownership by gender
+
 ```{r Trend in Homeownership by Gender}
+temp_df <- H_earntype %>%
+  filter(race == 'total',
+         var_type == "percent", sex == "total") %>%
+  pivot_wider(names_from = "male_fem_mult_earn", values_from = "homeownership")
 
-#H_gen_trend<-survey_by_demog(census_microdata081122, weight_var = "HHWT", 'homeownership')
-
-H_gen_trend %<>%
-  filter(
-    var_type == 'percent',
-    race == 'total',
-    sex != 'total')
-
-trend(H_gen_trend, 
-      homeownership,
+trend(temp_df, 
+      multiple_earner:single_male_earner,
       plot_title = "Homeownership by Year", 
-      cat = 'sex', 
+      cat = c("Multiple Earners" = "multiple_earner", "Single Female" = "single_fem_earner", "Single Male" = "single_male_earner"),
+      pctiles = F,
       y_title = 'Percent',
+      rollmean = 3,
       caption_text = 
       "Source: Greater Louisville Project
        Data from GLP analysis of ACS microdata from IPUMS-USA")
 
 ```
+
+## Single female homeownership {.tabset}
+
+### Ranking
 
 ```{r Ranking Single Female Homeownership}
 
@@ -408,7 +434,13 @@ trend(H_gen_trend,
 #     race == 'total',
 #     var_type == 'percent')
 
-ranking(H_singFem_rank, 'homeownership',
+temp_df <- H_earntype %>% 
+  filter(male_fem_mult_earn == "single_fem_earner",
+         var_type == "percent", sex == "total") %>%
+  mutate(sex = "total")
+
+ranking(temp_df, 
+        'homeownership',
         plot_title = "Single Earner Female Homeownership",
         caption_text = 
       "Source: Greater Louisville Project
@@ -416,26 +448,7 @@ ranking(H_singFem_rank, 'homeownership',
 
 ```
 
-```{r Ranking Single Female with Kids Homeownership}
-
-# H_sinFem_kids <-census_microdata081122 %>%
-#   filter(
-#     year == '2019',
-#     earner_type == 'single_earner',
-#     NCHILD > 0) %>%
-#   survey_by_demog('homeownership', weight_var = "HHWT") %>%
-#   filter(
-#     sex == 'total',
-#     race == 'total',
-#     var_type == 'percent')
-
-ranking(H_sinFem_kids, 'homeownership',
-        plot_title = "Single Earner Female Homeownership with Children",
-        caption_text = 
-      "Source: Greater Louisville Project
-       Data from GLP analysis of ACS microdata from IPUMS-USA")
-
-```
+### by presence of kids
 
 ```{r Trend in Homeownership by for Single Females with vs. without Kids}
 
@@ -465,7 +478,32 @@ trend(H_s_Femkids_trend,
 
 ```
 
-```{r Trend in Female Homeownership by Race}
+## Ranking with kids
+
+```{r Ranking Single Female with Kids Homeownership}
+
+# H_sinFem_kids <-census_microdata081122 %>%
+#   filter(
+#     year == '2019',
+#     earner_type == 'single_earner',
+#     NCHILD > 0) %>%
+#   survey_by_demog('homeownership', weight_var = "HHWT") %>%
+#   filter(
+#     sex == 'total',
+#     race == 'total',
+#     var_type == 'percent')
+
+ranking(H_sinFem_kids, 'homeownership',
+        plot_title = "Single Earner Female Homeownership with Children",
+        title_scale = 0.8,
+        caption_text = 
+      "Source: Greater Louisville Project
+       Data from GLP analysis of ACS microdata from IPUMS-USA")
+
+```
+
+
+```{r Trend in Single Female Homeownership by Race}
 
 #H_Fem_race <- survey_by_demog(census_microdata081122 ,weight_var = "HHWT", 'homeownership')
 
@@ -473,18 +511,15 @@ trend(H_s_Femkids_trend,
 #   filter(sex == 'female') %>%
 #   survey_by_demog( weight_var = "HHWT", 'homeownership')
 
+temp_df <- H_earntype %>%
+  filter(male_fem_mult_earn == "single_fem_earner",
+         var_type == "percent", sex == "total")
 
-H_Fem_race %<>%
-  filter(
-    var_type == 'percent',
-    race != 'total',
-    sex == 'total')
-
-trend(H_Fem_race, 
+trend(filter(temp_df, race != "hispanic"), 
       homeownership, 
       rollmean = 3,
       pctiles = F,
-      plot_title = "Female With Kids Homeownership by Year", 
+      plot_title = "Single Female Homeownership by Year", 
       cat = 'race', 
       y_title = 'Percent',
       caption_text = 
@@ -505,6 +540,7 @@ cut_95 = quantile(lville_2019$HHINCOME, probs = 0.95)
 
 ```
 
+## Income Percentiles
 
 ```{r 2019 Louisville Men and Women Income Compared}
 
@@ -522,6 +558,23 @@ cut_95 = quantile(lville_2019$HHINCOME, probs = 0.95)
 
 #p$HHINCOME %>% dollar(accuracy = 0.1, scale = .001, suffix = "k") 
 
+single_earner_pctiles <- lville_2019 %>%
+  group_by(sex) %>%
+  summarize(
+    ten_pct = Hmisc::wtd.quantile(HHINCOME, HHWT, probs = 0.1),
+    twenty_five_pct = Hmisc::wtd.quantile(HHINCOME, HHWT, probs = 0.25),
+    fifty_pct = Hmisc::wtd.quantile(HHINCOME, HHWT, probs = 0.5),
+    seventy_five_pct = Hmisc::wtd.quantile(HHINCOME, HHWT, probs = 0.75),
+    ninety_pct = Hmisc::wtd.quantile(HHINCOME, HHWT, probs = 0.9))
+
+library(gt) 
+
+gt(single_earner_pctiles)
+```
+
+## Income by Earner Gender
+
+```{r}
 p <- lville_2019 %>% 
   filter(HHINCOME <= cut_95,
          earner_type == "single_earner") %>%
@@ -530,7 +583,7 @@ p <- lville_2019 %>%
 p <- p + glp_graph_theme
 
 p <- p + labs(
-  title = "Male Single Earner vs Female Single Earner Dollars",
+  title = "Single Earner Income by Gender",
 ) +
   
   ylab(" ") +
@@ -554,6 +607,8 @@ scale_x_continuous(
 p
 ```
 
+## Single Female Income by Race
+
 ```{r 2019 Louisville Single Female Income by Race}
 
 # Need help turning yaxis into percents
@@ -566,7 +621,7 @@ sing_fem_inc_race <- lville_2019 %>%
     HHINCOME <= cut_95) %>%
   func_plt_hist_overlay( "race") 
 
-sing_fem_inc_race <- sing_fem_inc_race + facet_wrap(~race, nrow = 2) 
+sing_fem_inc_race <- sing_fem_inc_race + facet_wrap(~race, nrow = 2, scales = "free_y") 
 
 sing_fem_inc_race <- sing_fem_inc_race + glp_graph_theme
 
@@ -587,13 +642,16 @@ sing_fem_inc_race <- sing_fem_inc_race +
   )  + 
   
 scale_x_continuous(
-  breaks = c(50000, 150000),
-  label = c("$50k", "$150k")
-)
+  breaks = c(50000, 100000, 150000),
+  label = c("$50k", "$100k", "$150k")
+) +
+  scale_y_continuous(labels = scales::comma)
 
 
 sing_fem_inc_race
 ```
+
+## Single Female Earners Cost Burden
 
 ```{r 2019 Louisville Cost of living Burden for Single Females - stacked histogram}
 
@@ -615,7 +673,6 @@ cost_burden_sf <- lville_2019 %>%
 
 cost_burden_sf_plot <- ggplot(cost_burden_sf, 
        aes(x = HHINCOME, fill = cost_burden, weights = HHWT), 
-       color="#00A9B7", 
        alpha=0.5, 
        position = "stack", 
        binwidth = 10000) + 
@@ -638,6 +695,8 @@ cost_burden_sf_plot <- cost_burden_sf_plot +
 
   )  +
 
+  scale_fill_manual(values = c("#0E4A99", "#F58021")) +
+  
 scale_x_continuous(
   breaks = c(50000, 100000, 150000, 200000),
   label = c("$50k", "$100k", "$150k", "$200k")
@@ -703,9 +762,9 @@ I_median_earn_age_plot <- I_median_earn_age_plot +
   xlab("Age Group") +
   
   scale_y_continuous(labels = scales::dollar) +   
-  scale_fill_discrete(labels = c("Multiple Earner", "Single Female Earner", "Single Male Earner"))  +
-  scale_fill_manual(values = c("#0E4A99", "#F58021", "#00A9B7")) +
-  scale_color_manual(values = c("#0E4A99", "#F58021", "#00A9B7"))
+  scale_fill_manual(
+    values = c("#0E4A99", "#F58021", "#00A9B7"), 
+    labels = c("Multiple Earner", "Single Female Earner", "Single Male Earner"))
 
   
 I_median_earn_age_plot
@@ -746,7 +805,7 @@ E_singM_singF_plot <- E_singM_singF_plot +
     ) +
 
   labs(
-  title = "Single Female vs. Single Male Education Breakdown",
+  title = "Educational attainment by gender for single earners",
 ) + 
   ylab(" ") +
   xlab(" ") +
@@ -841,14 +900,25 @@ cost_burden_age_sf_plot <- cost_burden_age_sf_plot +
 
 cost_burden_age_sf_plot
 
-cost_burden_age_sf_plot
 ```
 
 ```{r  Cost Burdened Stage by Age/Race}
 
 #x-axis...not legible on Josh's comp
 
-cost_burden_age_sf_facet_plt <- ggplot(cost_burden_age_sf,
+temp_df <- cost_burden_age_sf %>%
+  mutate(
+    age_group = case_when(
+      age %in% 15:19 ~ NA_character_, 
+      age %in% 20:29 ~ "20-29", 
+      age %in% 30:39 ~ "30-39",  
+      age %in% 40:49 ~ "40-49",  
+      age %in% 50:59 ~ "50-59",  
+      age %in% 60:69 ~ "60-69", 
+      age %in% 70:79 ~ "70-79", 
+      age >= 80 ~ "80+"))
+
+cost_burden_age_sf_facet_plt <- ggplot(temp_df,
        aes(x=age_group, y=HHWT , fill=cost_burden),
         color="#00A9B7") +
 geom_bar(stat="identity", position='fill')+
@@ -859,14 +929,16 @@ cost_burden_age_sf_facet_plt <- cost_burden_age_sf_facet_plt + glp_graph_theme
 cost_burden_age_sf_facet_plt <- cost_burden_age_sf_facet_plt + 
     theme(
     legend.position = "right",
-    strip.text = element_blank()
+    
+    strip.text = element_text(size = 40)
     ) +
   labs(
-  title = "Cost Burdened Status by Earner Type",
+  title = "Cost Burdened Status by Age and Earner Type",
 ) + 
   ylab(" ") +
   xlab(" ") +
   scale_fill_discrete(labels = c("Non Cost Burdened", "Cost Burdened")) + 
+  scale_x_discrete(guide = guide_axis(n.dodge=2)) +
 
   scale_y_continuous(labels = scales::percent)
 
@@ -920,8 +992,6 @@ earner_trend_plt <- earner_trend_plt +
   scale_fill_discrete(labels = c("Multiple Earner", "Single Female Earner", "Single Male Earner")) + 
 
   scale_y_continuous(labels = scales::percent)
-
-cost_burden_age_sf_facet_plt
 
 earner_trend_plt
 ```
