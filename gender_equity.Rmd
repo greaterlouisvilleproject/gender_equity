@@ -1,9 +1,11 @@
 ---
 title: "Gender Equity Dashboard"
-output: 
+output:
+  pdf_document:
+    toc: yes
   html_document:
-    toc: true
-    toc_float: true
+    toc: yes
+    toc_float: yes
     code_folding: hide
 ---
 
@@ -194,7 +196,7 @@ census_microdata081122 %<>%
 
   kd_pres = if_else(NCHILD > 0, "kids", "no_kids"), 
 
-    male_fem_mult_earn = case_when(
+    earner_type_d = case_when(
       sex == 'female' & earner_type == 'single_earner' ~ 'single_fem_earner',
       sex == 'male' & earner_type == 'single_earner' ~ 'single_male_earner',
       earner_type == 'multi_earner' ~ 'multiple_earner') ,
@@ -238,17 +240,17 @@ cost_burden_age_sf <- census_microdata081122 %>%
 H_gen_trend <- survey_by_demog(census_microdata081122, weight_var = "HHWT", 'homeownership')
 
 H_earntype_race <- census_microdata081122 %>%
-  group_by(FIPS, year, race, male_fem_mult_earn) %>%
+  group_by(FIPS, year, race, earner_type_d) %>%
   summarize(homeownership = sum(HHWT[homeownership]) / sum(HHWT) * 100, .groups = "drop")
 
 H_earntype  <- census_microdata081122 %>%
-  group_by(FIPS, year, male_fem_mult_earn) %>%
+  group_by(FIPS, year, earner_type_d) %>%
   summarize(homeownership = sum(HHWT[homeownership]) / sum(HHWT) * 100, .groups = "drop") %>%
   mutate(race = "total")
 
 H_earntype %<>%
   bind_rows(H_earntype_race) %>%
-  select(FIPS, year, race, male_fem_mult_earn, homeownership)
+  select(FIPS, year, race, earner_type_d, homeownership)
 
 H_singFem_rank <- census_microdata081122 %>%
   filter(
@@ -281,12 +283,12 @@ H_s_Fem_trend <- census_microdata081122 %>%
                     filter(earner_type == 'single_earner') %>%
   survey_by_demog( weight_var = "HHWT", 'homeownership')
 
-I_CB_earn_trend <- survey_by_demog(census_microdata081122, weight_var = "HHWT", 'cost_burden', other_grouping_vars = c('male_fem_mult_earn'))
+I_CB_earn_trend <- survey_by_demog(census_microdata081122, weight_var = "HHWT", 'cost_burden', other_grouping_vars = c('earner_type_d'))
 
 H_earntype <- survey_by_demog(census_microdata081122, 
                               weight_var = "HHWT", 
                               'homeownership', 
-                              other_grouping_vars = c('male_fem_mult_earn'))
+                              other_grouping_vars = c('earner_type_d'))
 
 save(H_gen_trend, H_earntype, H_singFem_rank, H_sinFem_kids, H_s_Femkids_trend, H_Fem_race, I_CB_earn_trend, file = "clean_svybydemog_data.RData")
 
@@ -399,11 +401,11 @@ shinyApp(ui, server, options = list(height = 500))
 
 ## Trends in Homeownership by gender
 
-```{r Trend in Homeownership by Gender}
+```{r Trend in Homeownership by Gender, eval=FALSE}
 temp_df <- H_earntype %>%
   filter(race == 'total',
          var_type == "percent", sex == "total") %>%
-  pivot_wider(names_from = "male_fem_mult_earn", values_from = "homeownership")
+  pivot_wider(names_from = "earner_type_d", values_from = "homeownership")
 
 trend(temp_df, 
       multiple_earner:single_male_earner,
@@ -435,7 +437,7 @@ trend(temp_df,
 #     var_type == 'percent')
 
 temp_df <- H_earntype %>% 
-  filter(male_fem_mult_earn == "single_fem_earner",
+  filter(earner_type_d == "single_fem_earner",
          var_type == "percent", sex == "total") %>%
   mutate(sex = "total")
 
@@ -493,9 +495,10 @@ trend(H_s_Femkids_trend,
 #     race == 'total',
 #     var_type == 'percent')
 
-ranking(H_sinFem_kids, 'homeownership',
+ranking(H_sinFem_kids,
+        'homeownership',
         plot_title = "Single Earner Female Homeownership with Children",
-        title_scale = 0.8,
+        #title_scale = 0.8,
         caption_text = 
       "Source: Greater Louisville Project
        Data from GLP analysis of ACS microdata from IPUMS-USA")
@@ -512,7 +515,7 @@ ranking(H_sinFem_kids, 'homeownership',
 #   survey_by_demog( weight_var = "HHWT", 'homeownership')
 
 temp_df <- H_earntype %>%
-  filter(male_fem_mult_earn == "single_fem_earner",
+  filter(earner_type_d == "single_fem_earner",
          var_type == "percent", sex == "total")
 
 trend(filter(temp_df, race != "hispanic"), 
@@ -528,6 +531,115 @@ trend(filter(temp_df, race != "hispanic"),
 
 ```
 
+## Homeownership by Race accounting for Children {.tabset}
+
+### With Children
+
+```{r Trend in Single Female Homeownership by Race with and without kids}
+
+
+df_kids_race <- census_microdata081122 %>%
+  group_by(FIPS, year, race, earner_type_d, kd_pres) %>%
+  summarize(homeownership = sum(HHWT[homeownership]) / sum(HHWT) * 100, .groups = "drop")
+
+df_kids <- census_microdata081122 %>%
+  group_by(FIPS, year, earner_type_d, kd_pres) %>%
+  summarize(homeownership = sum(HHWT[homeownership]) / sum(HHWT) * 100, .groups = "drop") %>%
+  mutate(race = "total")
+
+df_kids %<>%
+  bind_rows(df_kids_race) %>%
+  select(FIPS, year, race, earner_type_d, homeownership, kd_pres) %>%
+  filter(earner_type_d == "single_fem_earner",
+         kd_pres == "kids")
+
+trend(filter(df_kids, race != "hispanic"), 
+      homeownership, 
+      rollmean = 3,
+      pctiles = F,
+      plot_title = "Single Female Homeownership by Year with Children", 
+      cat = 'race', 
+      y_title = 'Percent',
+      caption_text = 
+      "Source Greater Louisville Project
+       Data from GLP analysis of ACS microdata from IPUMS-USA")
+
+```
+
+### Without Children
+
+```{r}
+
+df_no_kids_race <- census_microdata081122 %>%
+  group_by(FIPS, year, race, earner_type_d, kd_pres) %>%
+  summarize(homeownership = sum(HHWT[homeownership]) / sum(HHWT) * 100, .groups = "drop")
+
+df_no_kids <- census_microdata081122 %>%
+  group_by(FIPS, year, earner_type_d, kd_pres) %>%
+  summarize(homeownership = sum(HHWT[homeownership]) / sum(HHWT) * 100, .groups = "drop") %>%
+  mutate(race = "total")
+
+df_no_kids %<>%
+  bind_rows(df_no_kids_race) %>%
+  select(FIPS, year, race, earner_type_d, homeownership, kd_pres) %>%
+  filter(earner_type_d == "single_fem_earner",
+         kd_pres == "no_kids")
+
+trend(filter(df_no_kids, race != "hispanic"), 
+      homeownership, 
+      rollmean = 3,
+      pctiles = F,
+      plot_title = "Single Female Homeownership by Year without Children", 
+      cat = 'race', 
+      y_title = 'Percent',
+      caption_text = 
+      "Source Greater Louisville Project
+       Data from GLP analysis of ACS microdata from IPUMS-USA")
+```
+
+## Single Earner Females in need of Affordable Housing {.tabset}
+
+### Cost burden vs. Severe Cost Burden
+
+```{r, include = FALSE}
+#variable of interest
+#cost_burden
+#severe_cost_burden
+#severe_housing_problems
+
+#fiter to single women
+#how many single women total?
+#how many single women are cost burdened?
+#how many single women are severley cost burdened?
+#how many single women have severe housing problems?
+#group by cost burden and severe housing problems and find values?
+  #notable to conclude A.our def of housing problems and most ppl face these because of low income
+  #
+
+val <- lville_2019 %>%
+  filter(
+    sex == "female",
+    earner_type == "single_earner"
+  )
+  group_by(severe_housing_problems) %>%
+  summarize(n=sum(HHWT, na.rm = TRUE)) %>%
+  mutate(
+    total = sum(n)
+  ) 
+#Cost Burden: 81655
+#Severe Cost Burden: 38830
+#Severe Housing Problems: 47392
+
+#use these stats in a paragraph
+
+
+```
+
+### Severe Cost Burden vs. Severe Housing Problems?
+
+```{r}
+
+```
 
 
 # Income
@@ -544,20 +656,7 @@ cut_95 = quantile(lville_2019$HHINCOME, probs = 0.95)
 
 ```{r 2019 Louisville Men and Women Income Compared}
 
-#################KEEP################
-
-## create hist for each of the most three recent years -> just for verification...that there isnt anything weird
-## if feeling funky, use gganimate to create a gif of histograms from 2000 to 2019
-
-#TO DO:
-# Change the x-axis to a dollar format (see trendline function in trendline_helpers.R) - done
-# Label the x-axis on every $50,000? - done
-# Let's use counts on the y-axis for the male and female graph - done?
-# Format the y-axis with commas - done
-# remove legend? - done
-
-#p$HHINCOME %>% dollar(accuracy = 0.1, scale = .001, suffix = "k") 
-
+#fix formatting
 single_earner_pctiles <- lville_2019 %>%
   group_by(sex) %>%
   summarize(
@@ -572,8 +671,9 @@ library(gt)
 gt(single_earner_pctiles)
 ```
 
-## Income by Earner Gender
+## Income by Earner Gender {.tabset}
 
+### Counts
 ```{r}
 p <- lville_2019 %>% 
   filter(HHINCOME <= cut_95,
@@ -607,33 +707,94 @@ scale_x_continuous(
 p
 ```
 
-## Single Female Income by Race
+### percent
+```{r}
 
-```{r 2019 Louisville Single Female Income by Race}
+temp_df <- lville_2019 %>% 
+  filter(HHINCOME <= cut_95,
+         earner_type == "single_earner")
 
-# Need help turning yaxis into percents
+  p_percent <- ggplot(temp_df, aes(x=HHINCOME, 
+                                   y = (..count..)/sum(..count..),
+                                   fill=sex, 
+                                   color = sex, 
+                                   weight = HHWT)) +
+    geom_histogram(alpha=0.5, position = 'identity', binwidth = 10000) +
+    scale_fill_manual(values = c("#0E4A99", "#F58021", "#00A9B7")) +
+    scale_color_manual(values = c("#0E4A99", "#F58021", "#00A9B7")) +
+
+    labs(fill="") +
+    xlab("Household Income") +
+    ylab("Percentage") 
+
+p_percent <- p_percent + glp_graph_theme
+
+p_percent <- p_percent + labs(
+  title = "Single Earner Income by Gender",
+) +
+  
+  ylab(" ") +
+  
+  guides(color = FALSE) + 
+  
+  facet_wrap(~sex, nrow = 2) +
+  
+  theme(
+  #axis.ticks.x =  element_line(size = 50000),
+  strip.text = element_blank()
+
+  )  +
+
+scale_x_continuous(
+  breaks = c(50000, 100000, 150000, 200000),
+  label = c("$50k", "$100k", "$150k", "$200k")
+) +
+  scale_y_continuous(labels=percent)
+
+p_percent
+```
 
 
-sing_fem_inc_race <- lville_2019 %>% 
+## Single Female Income by Race {.tabset}
+
+```{r, include=FALSE}
+
+func_income_by_race <- function(race_group) {
+
+
+
+  q <- census_microdata081122 %>% 
   filter(
+    FIPS == "21111",
+    year %in% 2016:2019,
     sex == 'female',
+    race == race_group,
     earner_type == 'single_earner',
-    HHINCOME <= cut_95) %>%
-  func_plt_hist_overlay( "race") 
+    HHINCOME <= cut_95) 
+  
+   q <- q %>%
+   ggplot( aes(x=HHINCOME, 
+              y = (..count..)/sum(..count..),
+               fill=race, 
+               color = race, 
+               weight = HHWT)) +
+    geom_histogram(alpha=0.5, position = 'identity', binwidth = 10000) 
 
-sing_fem_inc_race <- sing_fem_inc_race + facet_wrap(~race, nrow = 2, scales = "free_y") 
 
-sing_fem_inc_race <- sing_fem_inc_race + glp_graph_theme
+#sing_fem_inc_race_plt <- sing_fem_inc_race_plt + facet_wrap(~race, nrow = 2) 
 
-sing_fem_inc_race <- sing_fem_inc_race + 
+q <- q + glp_graph_theme
+
+q <- q + 
   labs(
-  title = "Single Female Earner Income",
+  title = "Black Female Single Earner Income",
 ) + 
   ylab(" ") +
+  xlab("Household Income")+
   
   guides(color = FALSE)
 
-sing_fem_inc_race <- sing_fem_inc_race + 
+q <- q + 
   
   theme( 
   #axis.ticks.x =  element_line(size = 50000),
@@ -645,19 +806,84 @@ scale_x_continuous(
   breaks = c(50000, 100000, 150000),
   label = c("$50k", "$100k", "$150k")
 ) +
-  scale_y_continuous(labels = scales::comma)
+  scale_y_continuous(labels = scales::percent)
 
-
-sing_fem_inc_race
+    
+  
+  return (q)
+  
+}
 ```
+
+### All Single Female Earners
+```{r}
+##add original faceted graph
+
+```
+
+
+### Single Black Female Earners
+
+```{r 2019 Louisville Single Female Income by Race, eval=FALSE}
+
+#need to create four separate tabs...one for each race...using % y axis
+
+black_female_earner <- func_income_by_race("black")
+black_female_earner
+
+```
+### Single Hispanic Female Earners
+
+```{r}
+
+hisp_female_earner <- func_income_by_race("hispanic")
+hisp_female_earner <- hisp_female_earner + 
+  labs(
+  title = "Hispanic Female Single Earner Income",
+) + 
+  scale_fill_manual(values = "#0E4A99") +
+  scale_color_manual(values = "#0E4A99")
+  
+hisp_female_earner
+```
+
+
+### Single White Female Earners
+```{r}
+white_female_earner <- func_income_by_race("white")
+white_female_earner <- white_female_earner + 
+  labs(
+  title = "White Female Single Earner Income",
+)  + 
+  scale_fill_manual(values = "#F58021") +
+  scale_color_manual(values = "#F58021")
+
+white_female_earner
+```
+
+### Single Other Race Female Earners
+```{r}
+other_female_earner <- func_income_by_race("other")
+other_female_earner <- other_female_earner + 
+  labs(
+  title = "Other Female Single Earner Income",
+) + 
+  scale_fill_manual(values = "#00A9B7") +
+  scale_color_manual(values = "#00A9B7")
+
+other_female_earner
+```
+interesting to see the faceted histogram tabset for 0,1,2 and 3 kids. 
+add living wage line cut off for each histogram...will change for each number of kids...get vals from csv harrison set via slack
 
 ## Single Female Earners Cost Burden
 
 ```{r 2019 Louisville Cost of living Burden for Single Females - stacked histogram}
 
-# TO DO
-# see above for x and y axis to-dos
-# Drop the legend title (see )
+#incomplete
+#need help with y axis...making a percent...there also seems to be two values per income bin
+#could not figure out labeling issue for x axis
+#push to gh for harrison...ha
 
 
 cost_burden_sf <- lville_2019 %>% 
@@ -669,14 +895,21 @@ cost_burden_sf <- lville_2019 %>%
     cost_burden = factor(cost_burden, 
                          levels = rev(c(TRUE, FALSE)), 
                          labels = rev(c("Cost Burdened", "Non Cost Burdened")), 
-                         ordered = TRUE))
+                         ordered = TRUE),
+    inc_bins = cut(HHINCOME, seq(1, 283500, 10000))
+    ) #, labels = paste0(low_points, "-",  high_points
+    
 
 cost_burden_sf_plot <- ggplot(cost_burden_sf, 
-       aes(x = HHINCOME, fill = cost_burden, weights = HHWT), 
+       aes(x = inc_bins,
+          y = (..count..)/sum(..count..),
+           color = cost_burden,
+           group = cost_burden, 
+           weights = HHWT), 
        alpha=0.5, 
        position = "stack", 
        binwidth = 10000) + 
-geom_histogram()
+geom_line() #change to geom line once categories are sorted
 
 cost_burden_sf_plot <- cost_burden_sf_plot + glp_graph_theme
 
@@ -695,13 +928,12 @@ cost_burden_sf_plot <- cost_burden_sf_plot +
 
   )  +
 
-  scale_fill_manual(values = c("#0E4A99", "#F58021")) +
+  scale_color_manual(values = c("#0E4A99", "#F58021")) +
   
-scale_x_continuous(
-  breaks = c(50000, 100000, 150000, 200000),
+scale_x_discrete(
   label = c("$50k", "$100k", "$150k", "$200k")
 ) +
-  scale_y_continuous(labels = scales::comma)
+  scale_y_continuous(labels = scales::percent)
 
 cost_burden_sf_plot
 ```
@@ -710,7 +942,7 @@ cost_burden_sf_plot
 
 #I_CB_earn_trend <- survey_by_demog(census_microdata081122, weight_var = "HHWT", 'cost_burden', other_grouping_vars = c('earner_type'), breakdowns = "sex")
 
-# I_CB_earn_trend <- survey_by_demog(census_microdata081122, weight_var = "HHWT", 'cost_burden', other_grouping_vars = c('male_fem_mult_earn'))
+# I_CB_earn_trend <- survey_by_demog(census_microdata081122, weight_var = "HHWT", 'cost_burden', other_grouping_vars = c('earner_type_d'))
 
 I_CB_earn_trend %<>%
   filter(
@@ -718,7 +950,7 @@ I_CB_earn_trend %<>%
     race == 'total',
     sex == 'total') %>%
   select( -c(sex,race)) %>%
-  pivot_wider(names_from = "male_fem_mult_earn", values_from = "cost_burden")
+  pivot_wider(names_from = "earner_type_d", values_from = "cost_burden")
   
 
 trend(I_CB_earn_trend, 
@@ -737,26 +969,19 @@ trend(I_CB_earn_trend,
 
 ```{r Median Income for Earning Group by Age}
 
-#will need to see if x-axis label knit correctly on Harrison's 
-#having issues switching to glp colors & renaming legend values
-
-#chart_possible_colors <- c("#0E4A99", "#F58021", "#00A9B7", "#800055", "#356E39", "#CFB94C", "#7E9C80")
-# chart_number_I_need = length(unique(data$group))
-# chart_these_colors <- possible_colors[1:number_I_need]
-
 I_median_earn_age <- lville_2019 %>%
-  group_by(age_group, male_fem_mult_earn) %>%
+  group_by(age_group, earner_type_d) %>%
   summarize(Med=median(HHINCOME)) 
 
 I_median_earn_age_plot <- ggplot(I_median_earn_age, 
-       aes(x=age_group, y=Med, fill = male_fem_mult_earn)) + 
+       aes(x=age_group, y=Med, fill = earner_type_d)) + 
   geom_bar(stat="identity", position='dodge') 
 
 I_median_earn_age_plot <- I_median_earn_age_plot + glp_graph_theme
 
 I_median_earn_age_plot <- I_median_earn_age_plot +
   labs(
-  title = "Median Earnings by Earning Type",
+  title = "Median Earnings by Age Group",
 ) + 
   ylab("Household Income") +
   xlab("Age Group") +
@@ -773,13 +998,14 @@ I_median_earn_age_plot
 
 # Education
 
-```{r Education for Single Male Vs. Single Female}
+```{r Education for Single Male Vs. Single Female, eval=FALSE}
 
-#issues displaying the percentages of each group
+#need to think about this more...maybe just use to focus on how similar ppl without kids are
 
-E_singM_singF <- lville_2019 %>% 
-  filter(earner_type == 'single_earner') %>%
-  group_by(sex, educ) %>%
+E_singM_singF <- census_microdata081122 %>% 
+  filter(year %in% 2017:2019, 
+         earner_type == 'single_earner') %>%
+  group_by(sex, educ, kd_pres) %>%
   summarize(n=sum(HHWT, na.rm = TRUE)) %>%
   mutate(
     total = sum(n),
@@ -790,11 +1016,13 @@ E_singM_singF <- lville_2019 %>%
 
 
 E_singM_singF_plot <- ggplot(E_singM_singF, 
-       aes(x=sex, y=rate, fill = educ)) + 
+       aes(x=sex, 
+           y=rate, 
+           fill = educ)) + 
   geom_bar(stat="identity", position = "fill") 
-  # geom_col(aes(fill = educ)) +
-  # geom_text(aes(label = rate, position = position_stack(vjust = 0.5))
-#)
+
+
+E_singM_singF_plot <- E_singM_singF_plot + facet_wrap(~kd_pres) 
   
 E_singM_singF_plot <- E_singM_singF_plot + glp_graph_theme
 
@@ -819,8 +1047,6 @@ E_singM_singF_plot
 
 ```{r, Education of Single Female by race}
 
-#show percentages in bars?
-#how does it look when harrison knits it?
 
 E_singF_race <- lville_2019 %>% 
   filter(
@@ -864,16 +1090,6 @@ E_singF_race_plot
 # Household Age
 ```{r Cost Burdened Status by Age}
 
-#will xaxis look normal if knitted from harrison's computer?
-
-# cost_burden_age_sf <- census_microdata081122 %>% 
-#     filter(year %in% 2010:2019) %>%
-#   mutate(
-#     cost_burden = factor(cost_burden, 
-#                          levels = rev(c(TRUE, FALSE)), 
-#                          labels = rev(c("Cost Burdened", "Non Cost Burdened")), 
-#                          ordered = TRUE)
-#     )
 
 cost_burden_age_sf %<>% drop_na(cost_burden) #this will need to be run once and then left alone if tweaking graphs
 
@@ -922,7 +1138,7 @@ cost_burden_age_sf_facet_plt <- ggplot(temp_df,
        aes(x=age_group, y=HHWT , fill=cost_burden),
         color="#00A9B7") +
 geom_bar(stat="identity", position='fill')+
-facet_wrap(~male_fem_mult_earn)
+facet_wrap(~earner_type_d)
 
 cost_burden_age_sf_facet_plt <- cost_burden_age_sf_facet_plt + glp_graph_theme
 
@@ -952,27 +1168,24 @@ cost_burden_age_sf_facet_plt
 
 # Earner Types Over Time
 ```{r Proportion of Earner Types over time}
-#does this specficially need to be for louisville? 
-#once data is decided, add this data frame to the saved data frame chunk at beginning of rmd file
-#x-axis is crowded
-#will knit look better from Harrison's
+
 
 earner_trend <- census_microdata081122 %>%
   
   mutate(
-    male_fem_mult_earn = case_when(
+    earner_type_d = case_when(
       sex == 'female' & earner_type == 'single_earner' ~ 'single_fem_earner',
       sex == 'male' & earner_type == 'single_earner' ~ 'single_male_earner',
       earner_type == 'multi_earner' ~ 'multiple_earner')
   ) %>% 
-  group_by(year, male_fem_mult_earn) %>%
+  group_by(year, earner_type_d) %>%
   summarize(n=sum(HHWT, na.rm = TRUE)) %>%
   mutate(
     total = sum(n),
     rate = n/sum(n)*100) 
   
 earner_trend_plt <- ggplot(earner_trend, 
-       aes(x=year, y=rate, fill=male_fem_mult_earn),
+       aes(x=year, y=rate, fill=earner_type_d),
         color="#00A9B7") + 
 geom_bar(stat="identity", position='fill')
 
@@ -996,5 +1209,3 @@ earner_trend_plt <- earner_trend_plt +
 earner_trend_plt
 ```
 
-
-# Mortgage Data
