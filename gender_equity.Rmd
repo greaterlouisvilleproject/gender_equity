@@ -348,26 +348,15 @@ ui <- fluidPage(
     sidebarLayout( sidebarPanel("Hi"),
     tabsetPanel(
       id="tab",
-      tabPanel("bla",
-            fluidRow(h2("Hi")),
-            fluidRow(
-        scrolly_container("scr"
-             , scrolly_graph( textOutput("section"),
-                              plotOutput("distPlot")
-
-                            )
-             , scrolly_sections(
-                scrolly_section( id = "green",
-                     sliderInput("bins", "Number of bins:", min = 1, max = 50, value = 30)
-                ),
-                scrolly_section(id = "red",
-                    h3("Title"),
-                    p("dit is een paragraaf, die de grafiek rood maakt")
-                ),
-                scrolly_section(id = "blue","Blauw"),
-                scrolly_section(id = "pink","Rose"),
-                scrolly_section(id = "purple","Paars"),
-                scrolly_section(id = "orange","Oranje boven!")
+      tabPanel(
+        "bla",
+        fluidRow(h2("Hi")),
+        fluidRow(
+        scrolly_container(
+          "scr",
+          scrolly_sections(
+            scrolly_section(id = 1, plotOutput("plot1")),
+            scrolly_section(id = 2, plotOutput("plot2"))
              )
         )
             ))
@@ -379,18 +368,12 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
 
-    output$distPlot <- renderPlot({
-        # generate bins based on input$bins from ui.R
-        x    <- faithful[, 2]
-        bins <- seq(min(x), max(x), length.out = input$bins + 1)
-        col <- input$scr
-        # draw the histogram with the specified number of bins
-        hist(x, breaks = bins, col = col, border = 'white')
-    })
-
     output$scr <- renderScrollytell({scrollytell()})
     output$section <- renderText(paste0("Section: ", input$scr))
 
+    output$plot1 <- renderPlot(g1)
+    output$plot2 <- renderPlot(g2)
+    
     observe({cat("section:", input$scr, "\n")})
 }
 
@@ -833,8 +816,8 @@ scale_x_continuous(
 
 sing_fem_inc_race_plt <- sing_fem_inc_race_plt +
   
-  scale_fill_manual(values = c("#0E4A99", "F58021","00A9B7", "800055")) +
-  scale_color_manual(values = c("#0E4A99","F58021","00A9B7", "800055")) 
+  scale_fill_manual(values = c("#0E4A99", "#F58021","#00A9B7", "#800055")) +
+  scale_color_manual(values = c("#0E4A99","#F58021","#00A9B7", "#800055")) 
 
 sing_fem_inc_race_plt
 ```
@@ -994,6 +977,14 @@ no_kids_female_earner
 #could not figure out labeling issue for x axis
 #push to gh for harrison...ha
 
+these_labels <- paste0(
+  dollar(seq(1, 273500, 10000),
+         scale = 0.001, accuracy = 1, suffix = "k"),
+  "-",
+  dollar(seq(10001, 283500, 10000),
+         scale = 0.001, accuracy = 1, suffix = "k"))
+
+these_labels2 <- paste0(dollar(seq(1, 273500, 10000), scale = 0.001, accuracy = 1, suffix = "k"))
 
 cost_burden_sf <- lville_2019 %>% 
   filter(
@@ -1005,20 +996,30 @@ cost_burden_sf <- lville_2019 %>%
                          levels = rev(c(TRUE, FALSE)), 
                          labels = rev(c("Cost Burdened", "Non Cost Burdened")), 
                          ordered = TRUE),
-    inc_bins = cut(HHINCOME, seq(1, 283500, 10000))
-    ) #, labels = paste0(low_points, "-",  high_points
+    inc_bins = cut(HHINCOME, seq(1, 283500, 10000),
+                   labels = these_labels) %>%
+      factor(levels = these_labels, ordered = TRUE)
+    )
     
+temp_df <- cost_burden_sf %>%
+  group_by(inc_bins, cost_burden) %>%
+  summarize(count = sum(HHWT), .groups = "drop") %>%
+  complete(inc_bins, cost_burden, fill = list(count = 0)) %>%
+  filter(!is.na(inc_bins)) %>%
+  group_by(inc_bins) %>%
+  mutate(percent = count / sum(count)) %>%
+  ungroup() %>%
+  filter(cost_burden == "Cost Burdened")
+ 
+temp_df <- temp_df[1:14,]
 
-cost_burden_sf_plot <- ggplot(cost_burden_sf, 
+cost_burden_sf_plot <- ggplot(temp_df, 
        aes(x = inc_bins,
-          y = (..count..)/sum(..count..),
-           color = cost_burden,
-           group = cost_burden, 
-           weights = HHWT), 
-       alpha=0.5, 
-       position = "stack", 
-       binwidth = 10000) + 
-geom_line() #change to geom line once categories are sorted
+           y = percent,
+           group = 1)) +
+  geom_line() +
+  geom_point()
+  #change to geom line once categories are sorted
 
 cost_burden_sf_plot <- cost_burden_sf_plot + glp_graph_theme
 
@@ -1038,10 +1039,6 @@ cost_burden_sf_plot <- cost_burden_sf_plot +
   )  +
 
   scale_color_manual(values = c("#0E4A99", "#F58021")) +
-  
-scale_x_discrete(
-  label = c("$50k", "$100k", "$150k", "$200k")
-) +
   scale_y_continuous(labels = scales::percent)
 
 cost_burden_sf_plot
