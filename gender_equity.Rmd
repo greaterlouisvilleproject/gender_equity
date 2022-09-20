@@ -426,16 +426,6 @@ trend(temp_df,
 
 ```{r Ranking Single Female Homeownership}
 
-# H_singFem_rank <- census_microdata081122 %>%
-#   filter(
-#     year == '2019',
-#     earner_type == 'single_earner') %>%
-#   survey_by_demog('homeownership', weight_var = "HHWT") %>%
-#   filter(
-#     sex == 'total',
-#     race == 'total',
-#     var_type == 'percent')
-
 temp_df <- H_earntype %>% 
   filter(earner_type_d == "single_fem_earner",
          var_type == "percent", sex == "total") %>%
@@ -454,10 +444,6 @@ ranking(temp_df,
 
 ```{r Trend in Homeownership by for Single Females with vs. without Kids}
 
-# H_s_Femkids_trend <- census_microdata081122 %>%
-#                     filter(earner_type == 'single_earner') %>%
-#   survey_by_demog( weight_var = "HHWT", 'homeownership', other_grouping_vars = c("kd_pres"))
-  
 H_s_Femkids_trend %<>%
   filter(
     var_type == 'percent',
@@ -465,7 +451,6 @@ H_s_Femkids_trend %<>%
     sex == "female") %>%
   pivot_wider(names_from = 'kd_pres', values_from = 'homeownership') %>%
   select(-sex)
-
 
 
 trend(H_s_Femkids_trend, 
@@ -484,17 +469,6 @@ trend(H_s_Femkids_trend,
 
 ```{r Ranking Single Female with Kids Homeownership}
 
-# H_sinFem_kids <-census_microdata081122 %>%
-#   filter(
-#     year == '2019',
-#     earner_type == 'single_earner',
-#     NCHILD > 0) %>%
-#   survey_by_demog('homeownership', weight_var = "HHWT") %>%
-#   filter(
-#     sex == 'total',
-#     race == 'total',
-#     var_type == 'percent')
-
 ranking(H_sinFem_kids,
         'homeownership',
         plot_title = "Single Earner Female Homeownership with Children",
@@ -508,11 +482,6 @@ ranking(H_sinFem_kids,
 
 ```{r Trend in Single Female Homeownership by Race}
 
-#H_Fem_race <- survey_by_demog(census_microdata081122 ,weight_var = "HHWT", 'homeownership')
-
-# H_Fem_race <- census_microdata081122 %>%
-#   filter(sex == 'female') %>%
-#   survey_by_demog( weight_var = "HHWT", 'homeownership')
 
 temp_df <- H_earntype %>%
   filter(earner_type_d == "single_fem_earner",
@@ -607,12 +576,12 @@ trend(filter(df_no_kids, race != "hispanic"),
 #severe_cost_burden
 #severe_housing_problems
 
-#fiter to single women
-#how many single women total?
-#how many single women are cost burdened?
-#how many single women are severley cost burdened?
-#how many single women have severe housing problems?
-#group by cost burden and severe housing problems and find values?
+#fiter to single women - done
+#single women total - 72032
+#single women are cost burdened - 34683
+#single women are severley cost burdened - 17028
+#single women have severe housing problems - 17935
+#group by cost burden and severe housing problems and find values - 17357
   #notable to conclude A.our def of housing problems and most ppl face these because of low income
   #
 
@@ -620,8 +589,8 @@ val <- lville_2019 %>%
   filter(
     sex == "female",
     earner_type == "single_earner"
-  )
-  group_by(severe_housing_problems) %>%
+  ) %>%
+  group_by(severe_housing_problems, cost_burden) %>%
   summarize(n=sum(HHWT, na.rm = TRUE)) %>%
   mutate(
     total = sum(n)
@@ -632,7 +601,7 @@ val <- lville_2019 %>%
 
 #use these stats in a paragraph
 
-
+val
 ```
 
 ### Severe Cost Burden vs. Severe Housing Problems?
@@ -818,7 +787,56 @@ scale_x_continuous(
 ### All Single Female Earners
 ```{r}
 ##add original faceted graph
+sing_fem_inc_race<-census_microdata081122 %>% 
+  filter(
+    FIPS == "21111",
+    year %in% 2016:2019,
+    sex == 'female',
+    earner_type == 'single_earner',
+    HHINCOME <= cut_95) 
+  
+   sing_fem_inc_race_plt <- sing_fem_inc_race %>%
+   ggplot( aes(x=HHINCOME, 
+              y = (..count..)/sum(..count..),
+               fill=race, 
+               color = race, 
+               weight = HHWT)) +
+    geom_histogram(alpha=0.5, position = 'identity', binwidth = 10000) 
 
+
+sing_fem_inc_race_plt <- sing_fem_inc_race_plt + facet_wrap(~race, nrow = 2) 
+
+sing_fem_inc_race_plt <- sing_fem_inc_race_plt + glp_graph_theme
+
+sing_fem_inc_race_plt <- sing_fem_inc_race_plt + 
+  labs(
+  title = "Female Single Earner Income",
+) + 
+  ylab(" ") +
+  xlab("Household Income")
+  
+  # guides(color = FALSE)
+
+sing_fem_inc_race_plt <- sing_fem_inc_race_plt + 
+  
+  theme( 
+  #axis.ticks.x =  element_line(size = 50000),
+  strip.text = element_blank()
+  
+  )  + 
+
+scale_x_continuous(
+  breaks = c(50000, 100000, 150000),
+  label = c("$50k", "$100k", "$150k")
+) +
+  scale_y_continuous(labels = scales::percent)
+
+sing_fem_inc_race_plt <- sing_fem_inc_race_plt +
+  
+  scale_fill_manual(values = c("#0E4A99", "F58021","00A9B7", "800055")) +
+  scale_color_manual(values = c("#0E4A99","F58021","00A9B7", "800055")) 
+
+sing_fem_inc_race_plt
 ```
 
 
@@ -875,6 +893,97 @@ other_female_earner
 ```
 interesting to see the faceted histogram tabset for 0,1,2 and 3 kids. 
 add living wage line cut off for each histogram...will change for each number of kids...get vals from csv harrison set via slack
+
+## Single Female Income by Children {.tabset}
+
+```{r}
+func_income_by_kids <- function(kids) {
+
+
+
+  w <- census_microdata081122 %>% 
+  filter(
+    FIPS == "21111",
+    year %in% 2016:2019,
+    sex == 'female',
+    kd_pres == kids,
+    earner_type == 'single_earner',
+    HHINCOME <= cut_95) 
+  
+   w <- w %>%
+   ggplot( aes(x=HHINCOME, 
+              y = (..count..)/sum(..count..),
+                fill= kd_pres,
+               color = kd_pres, 
+               weight = HHWT)) +
+    geom_histogram(alpha=0.5, position = 'identity', binwidth = 10000) 
+
+
+#sing_fem_inc_race_plt <- sing_fem_inc_race_plt + facet_wrap(~race, nrow = 2) 
+
+w <- w + glp_graph_theme
+
+w <- w + 
+  labs(
+  title = "Black Female Single Earner Income",
+) + 
+  ylab(" ") +
+  xlab("Household Income")+
+  
+  guides(color = FALSE)
+
+w <- w + 
+  
+  theme( 
+  #axis.ticks.x =  element_line(size = 50000),
+  strip.text = element_blank()
+  
+  )  + 
+  
+scale_x_continuous(
+  breaks = c(50000, 100000, 150000),
+  label = c("$50k", "$100k", "$150k")
+) +
+  scale_y_continuous(labels = scales::percent)
+
+    
+  
+  return (w)
+
+}
+```
+
+### Single Female Earner with Children
+```{r}
+
+#why is color not working?
+#still need to add living wage lines
+
+kids_female_earner <- func_income_by_kids("kids")
+kids_female_earner <- kids_female_earner + 
+  labs(
+  title = "Female Single Earner Income, with Children",
+) + 
+  scale_fill_manual(values = c("purple")) +
+  scale_color_manual(values = c("purple")) +
+  scale_fill_discrete(labels = "Children")
+
+kids_female_earner
+```
+
+### Single Female Earner without Children
+```{r}
+no_kids_female_earner <- func_income_by_kids("kids")
+no_kids_female_earner <- no_kids_female_earner + 
+  labs(
+  title = "Female Single Earner Income, without Children",
+) + 
+  scale_fill_manual(values = "#800055") +
+  scale_color_manual(values = "#800055") +
+  scale_fill_discrete(labels = "No Children")
+
+no_kids_female_earner
+```
 
 ## Single Female Earners Cost Burden
 
