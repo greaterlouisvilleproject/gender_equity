@@ -1,8 +1,6 @@
 ---
 title: "Gender Equity Dashboard"
 output:
-  pdf_document:
-    toc: yes
   html_document:
     toc: yes
     toc_float: yes
@@ -11,7 +9,7 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, 
-                      dev.args=list(bg="transparent"), fig.width=15, fig.height=12)
+                      dev.args=list(bg="transparent"), fig.width=25, fig.height=20)
 
 library(glptools)
 glp_load_packages(TRUE)
@@ -620,7 +618,30 @@ single_earner_pctiles <- lville_2019 %>%
 
 library(gt) 
 
-gt(single_earner_pctiles)
+gt(single_earner_pctiles) %>%
+  tab_header(title = "Income Percentiles by Sex",
+             subtitle = "") %>%
+  fmt_currency(columns = vars(ten_pct, twenty_five_pct, fifty_pct, seventy_five_pct,
+                              ninety_pct),
+                            use_subunits = F) %>%
+  cols_label(ten_pct = "10th",
+             twenty_five_pct = "25th",
+             fifty_pct = "Median",
+             seventy_five_pct	= "75th",
+             ninety_pct = "90th") %>%
+  cols_align(align = "center") %>%
+      tab_source_note(
+    source_note = md("Source: ACS microdata from IPUMS-USA")) %>%
+  opt_row_striping(row_striping = TRUE) %>%
+  opt_table_outline() %>%
+  tab_options(
+    table.font.size = px(12),
+    table.width = pct(50)) %>%
+  tab_style(
+    cell_text(
+      font = "Montserrat",
+      weight = "bold"), 
+    cells_row_groups())
 ```
 
 ## Income by Earner Gender {.tabset}
@@ -874,13 +895,13 @@ other_female_earner <- other_female_earner +
 
 other_female_earner
 ```
-interesting to see the faceted histogram tabset for 0,1,2 and 3 kids. 
+interesting to see the histogram tabset for 0,1,2 and 3 kids. 
 add living wage line cut off for each histogram...will change for each number of kids...get vals from csv harrison set via slack
 
 ## Single Female Income by Children {.tabset}
 
 ```{r}
-func_income_by_kids <- function(kids) {
+func_income_by_kids <- function(num_kids, living_wage) {
 
 
 
@@ -889,17 +910,19 @@ func_income_by_kids <- function(kids) {
     FIPS == "21111",
     year %in% 2016:2019,
     sex == 'female',
-    kd_pres == kids,
+    NCHILD == num_kids,
     earner_type == 'single_earner',
     HHINCOME <= cut_95) 
   
    w <- w %>%
    ggplot( aes(x=HHINCOME, 
               y = (..count..)/sum(..count..),
-                fill= kd_pres,
-               color = kd_pres, 
+              fill = sex,
+              group = sex,
                weight = HHWT)) +
-    geom_histogram(alpha=0.5, position = 'identity', binwidth = 10000) 
+    geom_histogram(alpha=0.5, position = 'identity', binwidth = 10000) +
+     geom_vline( aes(xintercept = living_wage), colour="red") 
+   
 
 
 #sing_fem_inc_race_plt <- sing_fem_inc_race_plt + facet_wrap(~race, nrow = 2) 
@@ -927,8 +950,7 @@ scale_x_continuous(
   breaks = c(50000, 100000, 150000),
   label = c("$50k", "$100k", "$150k")
 ) +
-  scale_y_continuous(labels = scales::percent)
-
+  scale_y_continuous(labels = scales::percent) 
     
   
   return (w)
@@ -936,55 +958,87 @@ scale_x_continuous(
 }
 ```
 
-### Single Female Earner with Children
+### Single Female Earner No Child
+
 ```{r}
+
 
 #why is color not working?
 #still need to add living wage lines
 
-kids_female_earner <- func_income_by_kids("kids")
-kids_female_earner <- kids_female_earner + 
+var <- census_microdata081122 %>% 
+  filter(
+    FIPS == "21111",
+    year %in% 2016:2019,
+    sex == 'female',
+    NCHILD == 0,
+    earner_type == 'single_earner') %>%
+  group_by(HHINCOME < 30303.98) %>%
+  summarize(count = sum(HHWT)) #a little more than half are earning a living wage
+#do this for each graphof this type...add info above chunk
+
+no_kids_female_earner <- func_income_by_kids(0, 30303.98)
+no_kids_female_earner <- no_kids_female_earner + 
   labs(
-  title = "Female Single Earner Income, with Children",
+  title = "Female Single Earner Income, No Children",
 ) + 
   scale_fill_manual(values = c("purple")) +
   scale_color_manual(values = c("purple")) +
   scale_fill_discrete(labels = "Children")
 
-kids_female_earner
+no_kids_female_earner
 ```
 
-### Single Female Earner without Children
+### Single Female Earner With One Child
 ```{r}
-no_kids_female_earner <- func_income_by_kids("kids")
-no_kids_female_earner <- no_kids_female_earner + 
+one_child <- func_income_by_kids(1, 60264.75)
+one_child <- one_child + 
   labs(
-  title = "Female Single Earner Income, without Children",
+  title = "Female Single Earner Income, One Child",
+) + 
+  scale_fill_manual(values = "#800055", labels = "One Child" ) +
+  scale_color_manual(values = "#800055") 
+
+one_child
+```
+
+
+### Single Female Earner with Two Children
+```{r}
+two_child <- func_income_by_kids(2, 76451.81)
+two_child <- two_child + 
+  labs(
+  title = "Female Single Earner Income, Two Children",
 ) + 
   scale_fill_manual(values = "#800055") +
   scale_color_manual(values = "#800055") +
-  scale_fill_discrete(labels = "No Children")
+  scale_fill_discrete(labels = "One Child")
 
-no_kids_female_earner
+two_child
 ```
+
+### Single Female Earner with Three Children
+```{r}
+three_child <- func_income_by_kids(3, 101452.61)
+three_child <- three_child + 
+  labs(
+  title = "Female Single Earner Income With Three Children",
+) + 
+  scale_fill_manual(values = "#800055") +
+  scale_color_manual(values = "#800055") +
+  scale_fill_discrete(labels = "One Child")
+
+three_child
+```
+
 
 ## Single Female Earners Cost Burden
 
 ```{r 2019 Louisville Cost of living Burden for Single Females - stacked histogram}
 
-#incomplete
-#need help with y axis...making a percent...there also seems to be two values per income bin
-#could not figure out labeling issue for x axis
-#push to gh for harrison...ha
+#make graph pretty
 
-these_labels <- paste0(
-  dollar(seq(1, 273500, 10000),
-         scale = 0.001, accuracy = 1, suffix = "k"),
-  "-",
-  dollar(seq(10001, 283500, 10000),
-         scale = 0.001, accuracy = 1, suffix = "k"))
-
-these_labels2 <- paste0(dollar(seq(1, 273500, 10000), scale = 0.001, accuracy = 1, suffix = "k"))
+these_labels <- paste0(dollar(seq(1, 273500, 10000), scale = 0.001, accuracy = 1, suffix = "k"))
 
 cost_burden_sf <- lville_2019 %>% 
   filter(
