@@ -1,5 +1,5 @@
 ---
-title: "Gender Equity Dashboard"
+title: "Gender Equity in Louisville"
 output:
   html_document:
     toc: yes
@@ -107,11 +107,6 @@ save(population_tract, file = "raw_data/tract_population.RData")
 
 ```
 
-# Housing data
-
-In this first chunk, let's read in the Census microdata. Here is some example code on how to read in the data, create new variables to categorize the rows of data into groups, and then summarize the data to create information about Louisville.
-
-Our goal is to create variables for gender, age group, whether someone is a mother, whether someone is married, their level of education, their income, whether they are the head of household, and the number of children they have.
 
 
 
@@ -135,9 +130,7 @@ write_feather(census_data, "raw_data/census_data_8_11_22.feather")
 census_microdata081122 <- read_feather("raw_data/census_data_8_11_22.feather") 
 
 ```
-This code chunk will identify which households are homeowners vs. renters (in the homeownership variable) and which households are cost-burdened, meaning they pay more thatn 30% of their income toward rent or a mortgage (in the cost_burden variable).
 
-There are also variables for severe cost burden (households that pay more than half of their income towards housing) and households with severe housing problems (lacking a kitchen, adequate plumbing, or an ample number of rooms for the number of people living there).
 
 
 ```{r clean data, include= FALSE}
@@ -296,8 +289,26 @@ save(H_gen_trend, H_earntype, H_singFem_rank, H_sinFem_kids, H_s_Femkids_trend, 
 load("clean_svybydemog_data.RData")
 ```
 
+Gender equity in Louisville is an unfortunately unequal reality. Women are worse off in key standard of living areas such as household income and home-ownership. Additionally, these issues are exasperated for women from a one-income home, women with children and minority women. Disproportionate cost of living burdens and care-taking responsibilities can perpetuate a viscous cycle of inequity. Understanding the true size of the 'equity gap' can help inform policy decisions to stop this cycle from continuing.  
 
-#Waffle Chart
+Key Takeaways:
+
+1. Women in Louisville, especially women from a one-income household make significantly less money than men from a one-income household.
+2. For women in Louisville from a one-income household, as the number of children in the household increases the fewer women earn a living wage.
+3. An overwhelming majority of women from a one-income home .
+4. Women in Louisville from a one-income household who pay at least 30% of their income in home expenses (rent or mortgage, utilities) rarely earn more than $70,000.
+5. Compared to peer cities, Louisville has relatively high home ownership for women from a one-income household with no children. However, for women from a one-income household with children, we are second to last. Additionally, homeownership for women from a one-income household with children has been steadily decreasing since 2016. 
+6. Homeownership issues for women from a one-income household are increased for minority women, with black women having the lowest ownership rates. 
+
+
+
+
+
+
+
+
+
+# Waffle Chart
 ```{r Harrison, eval=FALSE, include=FALSE}
 
 waffle_data <- survey_by_demog(lville_2019, "hh_type", other_grouping_vars = c("kd_pres", "earner_type"))
@@ -377,221 +388,6 @@ server <- function(input, output) {
 
 shinyApp(ui, server, options = list(height = 500))
 ```
-
-# Homeownership
-
-## Trends in Homeownership by gender
-
-```{r Trend in Homeownership by Gender, eval=FALSE}
-temp_df <- H_earntype %>%
-  filter(race == 'total',
-         var_type == "percent", sex == "total") %>%
-  pivot_wider(names_from = "earner_type_d", values_from = "homeownership")
-
-trend(temp_df, 
-      multiple_earner:single_male_earner,
-      plot_title = "Homeownership by Year", 
-      cat = c("Multiple Earners" = "multiple_earner", "Single Female" = "single_fem_earner", "Single Male" = "single_male_earner"),
-      pctiles = F,
-      y_title = 'Percent',
-      rollmean = 3,
-      caption_text = 
-      "Source: Greater Louisville Project
-       Data from GLP analysis of ACS microdata from IPUMS-USA")
-
-```
-
-## Single female homeownership {.tabset}
-
-### Ranking
-
-```{r Ranking Single Female Homeownership}
-
-temp_df <- H_earntype %>% 
-  filter(earner_type_d == "single_fem_earner",
-         var_type == "percent", sex == "total") %>%
-  mutate(sex = "total")
-
-ranking(temp_df, 
-        'homeownership',
-        plot_title = "Single Earner Female Homeownership",
-        caption_text = 
-      "Source: Greater Louisville Project
-       Data from GLP analysis of ACS microdata from IPUMS-USA")
-
-```
-
-### by presence of kids
-
-```{r Trend in Homeownership by for Single Females with vs. without Kids}
-
-H_s_Femkids_trend %<>%
-  filter(
-    var_type == 'percent',
-    race == 'total',
-    sex == "female") %>%
-  pivot_wider(names_from = 'kd_pres', values_from = 'homeownership') %>%
-  select(-sex)
-
-
-trend(H_s_Femkids_trend, 
-      kids:no_kids,
-      rollmean = 3,
-      plot_title = "Female Homeownership by Presence of Children", 
-      cat = c("Children" = "kids", "No Children" = "no_kids"), 
-      y_title = 'Percent',
-      caption_text = 
-      "Source: Greater Louisville Project
-       Data from GLP analysis of ACS microdata from IPUMS-USA")
-
-```
-
-## Ranking with kids
-
-```{r Ranking Single Female with Kids Homeownership}
-
-ranking(H_sinFem_kids,
-        'homeownership',
-        plot_title = "Single Earner Female Homeownership with Children",
-        #title_scale = 0.8,
-        caption_text = 
-      "Source: Greater Louisville Project
-       Data from GLP analysis of ACS microdata from IPUMS-USA")
-
-```
-
-
-```{r Trend in Single Female Homeownership by Race}
-
-
-temp_df <- H_earntype %>%
-  filter(earner_type_d == "single_fem_earner",
-         var_type == "percent", sex == "total")
-
-trend(filter(temp_df, race != "hispanic"), 
-      homeownership, 
-      rollmean = 3,
-      pctiles = F,
-      plot_title = "Single Female Homeownership by Year", 
-      cat = 'race', 
-      y_title = 'Percent',
-      caption_text = 
-      "Source Greater Louisville Project
-       Data from GLP analysis of ACS microdata from IPUMS-USA")
-
-```
-
-## Homeownership by Race accounting for Children {.tabset}
-
-### With Children
-
-```{r Trend in Single Female Homeownership by Race with and without kids}
-
-
-df_kids_race <- census_microdata081122 %>%
-  group_by(FIPS, year, race, earner_type_d, kd_pres) %>%
-  summarize(homeownership = sum(HHWT[homeownership]) / sum(HHWT) * 100, .groups = "drop")
-
-df_kids <- census_microdata081122 %>%
-  group_by(FIPS, year, earner_type_d, kd_pres) %>%
-  summarize(homeownership = sum(HHWT[homeownership]) / sum(HHWT) * 100, .groups = "drop") %>%
-  mutate(race = "total")
-
-df_kids %<>%
-  bind_rows(df_kids_race) %>%
-  select(FIPS, year, race, earner_type_d, homeownership, kd_pres) %>%
-  filter(earner_type_d == "single_fem_earner",
-         kd_pres == "kids")
-
-trend(filter(df_kids, race != "hispanic"), 
-      homeownership, 
-      rollmean = 3,
-      pctiles = F,
-      plot_title = "Single Female Homeownership by Year with Children", 
-      cat = 'race', 
-      y_title = 'Percent',
-      caption_text = 
-      "Source Greater Louisville Project
-       Data from GLP analysis of ACS microdata from IPUMS-USA")
-
-```
-
-### Without Children
-
-```{r}
-
-df_no_kids_race <- census_microdata081122 %>%
-  group_by(FIPS, year, race, earner_type_d, kd_pres) %>%
-  summarize(homeownership = sum(HHWT[homeownership]) / sum(HHWT) * 100, .groups = "drop")
-
-df_no_kids <- census_microdata081122 %>%
-  group_by(FIPS, year, earner_type_d, kd_pres) %>%
-  summarize(homeownership = sum(HHWT[homeownership]) / sum(HHWT) * 100, .groups = "drop") %>%
-  mutate(race = "total")
-
-df_no_kids %<>%
-  bind_rows(df_no_kids_race) %>%
-  select(FIPS, year, race, earner_type_d, homeownership, kd_pres) %>%
-  filter(earner_type_d == "single_fem_earner",
-         kd_pres == "no_kids")
-
-trend(filter(df_no_kids, race != "hispanic"), 
-      homeownership, 
-      rollmean = 3,
-      pctiles = F,
-      plot_title = "Single Female Homeownership by Year without Children", 
-      cat = 'race', 
-      y_title = 'Percent',
-      caption_text = 
-      "Source Greater Louisville Project
-       Data from GLP analysis of ACS microdata from IPUMS-USA")
-```
-
-## Single Earner Females in need of Affordable Housing {.tabset}
-
-### Cost burden vs. Severe Cost Burden
-
-```{r, include = FALSE}
-#variable of interest
-#cost_burden
-#severe_cost_burden
-#severe_housing_problems
-
-#fiter to single women - done
-#single women total - 72032
-#single women are cost burdened - 34683
-#single women are severley cost burdened - 17028
-#single women have severe housing problems - 17935
-#group by cost burden and severe housing problems and find values - 17357
-  #notable to conclude A.our def of housing problems and most ppl face these because of low income
-  #
-
-val <- lville_2019 %>%
-  filter(
-    sex == "female",
-    earner_type == "single_earner"
-  ) %>%
-  group_by(severe_housing_problems, cost_burden) %>%
-  summarize(n=sum(HHWT, na.rm = TRUE)) %>%
-  mutate(
-    total = sum(n)
-  ) 
-#Cost Burden: 81655
-#Severe Cost Burden: 38830
-#Severe Housing Problems: 47392
-
-#use these stats in a paragraph
-
-val
-```
-
-### Severe Cost Burden vs. Severe Housing Problems?
-
-```{r}
-
-```
-
-
 # Income
 
 ```{r, include = FALSE}
@@ -680,7 +476,7 @@ scale_x_continuous(
 p
 ```
 
-### percent
+### Percent
 ```{r}
 
 temp_df <- lville_2019 %>% 
@@ -753,8 +549,6 @@ func_income_by_race <- function(race_group) {
                weight = HHWT)) +
     geom_histogram(alpha=0.5, position = 'identity', binwidth = 10000) 
 
-
-#sing_fem_inc_race_plt <- sing_fem_inc_race_plt + facet_wrap(~race, nrow = 2) 
 
 q <- q + glp_graph_theme
 
@@ -845,7 +639,7 @@ sing_fem_inc_race_plt
 
 
 ### Single Black Female Earners
-```{r 2019 Louisville Single Female Income by Race, eval=FALSE}
+```{r 2019 Louisville Single Female Income by Race}
 
 black_female_earner <- func_income_by_race("black")
 black_female_earner
@@ -893,7 +687,7 @@ other_female_earner <- other_female_earner +
 other_female_earner
 ```
 
-## Single Female Income by Children {.tabset}
+## Female Single Income Compared to Living Wage {.tabset}
 
 ```{r}
 func_income_by_kids <- function(num_kids, living_wage) {
@@ -1055,7 +849,7 @@ three_child
 
 ## Single Female Earners Cost Burden
 
-```{r 2019 Louisville Cost of living Burden for Single Females - stacked histogram}
+```{r}
 
 
 these_labels <- paste0(dollar(seq(1, 273500, 10000), scale = 0.001, accuracy = 1, suffix = "k"))
@@ -1098,7 +892,7 @@ cost_burden_sf_plot <- cost_burden_sf_plot + glp_graph_theme
 
 cost_burden_sf_plot <- cost_burden_sf_plot + 
   labs(
-  title = "Female Single Earner Cost Burden Trend",
+  title = "Female Single Earner Cost Burden Level by Income",
 ) + 
   ylab(" ") +
   xlab("Household Income") +
@@ -1174,11 +968,218 @@ I_median_earn_age_plot
 
 ```
 
+# Homeownership
+
+## Trends in Homeownership by gender
+
+```{r Trend in Homeownership by Gender}
+temp_df <- H_earntype %>%
+  filter(race == 'total',
+         var_type == "percent", sex == "total") %>%
+  pivot_wider(names_from = "earner_type_d", values_from = "homeownership")
+
+trend(temp_df, 
+      multiple_earner:single_male_earner,
+      plot_title = "Homeownership by Year", 
+      cat = c("Multiple Earners" = "multiple_earner", "Single Female" = "single_fem_earner", "Single Male" = "single_male_earner"),
+      pctiles = F,
+      y_title = 'Percent',
+      rollmean = 3,
+      caption_text = 
+      "Source: Greater Louisville Project
+       Data from GLP analysis of ACS microdata from IPUMS-USA")
+
+```
+
+## Single female homeownership {.tabset}
+
+### Ranking
+
+```{r Ranking Single Female Homeownership}
+
+temp_df <- H_earntype %>% 
+  filter(earner_type_d == "single_fem_earner",
+         var_type == "percent", sex == "total") %>%
+  mutate(sex = "total")
+
+ranking(temp_df, 
+        'homeownership',
+        plot_title = "Single Earner Female Homeownership",
+        caption_text = 
+      "Source: Greater Louisville Project
+       Data from GLP analysis of ACS microdata from IPUMS-USA")
+
+```
+
+### Presence of Children
+
+```{r Trend in Homeownership by for Single Females with vs. without Kids}
+
+H_s_Femkids_trend %<>%
+  filter(
+    var_type == 'percent',
+    race == 'total',
+    sex == "female") %>%
+  pivot_wider(names_from = 'kd_pres', values_from = 'homeownership') %>%
+  select(-sex)
+
+
+trend(H_s_Femkids_trend, 
+      kids:no_kids,
+      rollmean = 3,
+      plot_title = "Female Homeownership by Presence of Children", 
+      cat = c("Children" = "kids", "No Children" = "no_kids"), 
+      y_title = 'Percent',
+      caption_text = 
+      "Source: Greater Louisville Project
+       Data from GLP analysis of ACS microdata from IPUMS-USA")
+
+```
+
+## Ranking with Children
+
+```{r Ranking Single Female with Kids Homeownership}
+
+ranking(H_sinFem_kids,
+        'homeownership',
+        plot_title = "Single Earner Female Homeownership with Children",
+        #title_scale = 0.8,
+        caption_text = 
+      "Source: Greater Louisville Project
+       Data from GLP analysis of ACS microdata from IPUMS-USA")
+
+```
+
+
+```{r Trend in Single Female Homeownership by Race}
+
+
+temp_df <- H_earntype %>%
+  filter(earner_type_d == "single_fem_earner",
+         var_type == "percent", sex == "total")
+
+trend(filter(temp_df, race != "hispanic"), 
+      homeownership, 
+      rollmean = 3,
+      pctiles = F,
+      plot_title = "Single Female Homeownership by Year", 
+      cat = 'race', 
+      y_title = 'Percent',
+      caption_text = 
+      "Source Greater Louisville Project
+       Data from GLP analysis of ACS microdata from IPUMS-USA")
+
+```
+
+## Homeownership by Race by Children {.tabset}
+
+### With Children
+
+```{r Trend in Single Female Homeownership by Race with and without kids}
+
+
+df_kids_race <- census_microdata081122 %>%
+  group_by(FIPS, year, race, earner_type_d, kd_pres) %>%
+  summarize(homeownership = sum(HHWT[homeownership]) / sum(HHWT) * 100, .groups = "drop")
+
+df_kids <- census_microdata081122 %>%
+  group_by(FIPS, year, earner_type_d, kd_pres) %>%
+  summarize(homeownership = sum(HHWT[homeownership]) / sum(HHWT) * 100, .groups = "drop") %>%
+  mutate(race = "total")
+
+df_kids %<>%
+  bind_rows(df_kids_race) %>%
+  select(FIPS, year, race, earner_type_d, homeownership, kd_pres) %>%
+  filter(earner_type_d == "single_fem_earner",
+         kd_pres == "kids")
+
+trend(filter(df_kids, race != "hispanic"), 
+      homeownership, 
+      rollmean = 3,
+      pctiles = F,
+      plot_title = "Single Female Homeownership by Year with Children", 
+      cat = 'race', 
+      y_title = 'Percent',
+      caption_text = 
+      "Source Greater Louisville Project
+       Data from GLP analysis of ACS microdata from IPUMS-USA")
+
+```
+
+### Without Children
+
+```{r}
+
+df_no_kids_race <- census_microdata081122 %>%
+  group_by(FIPS, year, race, earner_type_d, kd_pres) %>%
+  summarize(homeownership = sum(HHWT[homeownership]) / sum(HHWT) * 100, .groups = "drop")
+
+df_no_kids <- census_microdata081122 %>%
+  group_by(FIPS, year, earner_type_d, kd_pres) %>%
+  summarize(homeownership = sum(HHWT[homeownership]) / sum(HHWT) * 100, .groups = "drop") %>%
+  mutate(race = "total")
+
+df_no_kids %<>%
+  bind_rows(df_no_kids_race) %>%
+  select(FIPS, year, race, earner_type_d, homeownership, kd_pres) %>%
+  filter(earner_type_d == "single_fem_earner",
+         kd_pres == "no_kids")
+
+trend(filter(df_no_kids, race != "hispanic"), 
+      homeownership, 
+      rollmean = 3,
+      pctiles = F,
+      plot_title = "Single Female Homeownership by Year without Children", 
+      cat = 'race', 
+      y_title = 'Percent',
+      caption_text = 
+      "Source Greater Louisville Project
+       Data from GLP analysis of ACS microdata from IPUMS-USA")
+```
+
+## Affordable Housing need for Female Single Earners
+
+need to add text here
+```{r, include = FALSE}
+#variable of interest
+#cost_burden
+#severe_cost_burden
+#severe_housing_problems
+
+#fiter to single women - done
+#single women total - 72032
+#single women are cost burdened - 34683
+#single women are severley cost burdened - 17028
+#single women have severe housing problems - 17935
+#group by cost burden and severe housing problems and find values - 17357
+  #notable to conclude A.our def of housing problems and most ppl face these because of low income
+  #
+
+val <- lville_2019 %>%
+  filter(
+    sex == "female",
+    earner_type == "single_earner"
+  ) %>%
+  group_by(severe_housing_problems, cost_burden) %>%
+  summarize(n=sum(HHWT, na.rm = TRUE)) %>%
+  mutate(
+    total = sum(n)
+  ) 
+#Cost Burden: 81655
+#Severe Cost Burden: 38830
+#Severe Housing Problems: 47392
+
+#use these stats in a paragraph
+
+val
+```
+
+
+
 # Education
 
-```{r Education for Single Male Vs. Single Female, eval=FALSE}
+```{r, eval=FALSE}
 
-#need to think about this more...maybe just use to focus on how similar ppl without kids are
 
 E_singM_singF <- census_microdata081122 %>% 
   filter(year %in% 2017:2019, 
@@ -1211,11 +1212,12 @@ E_singM_singF_plot <- E_singM_singF_plot +
     ) +
 
   labs(
-  title = "Educational attainment by gender for single earners",
+  title = "Single Earner Education Levels by Gender",
 ) + 
   ylab(" ") +
   xlab(" ") +
-  scale_fill_discrete(labels = c("Graduate","Bachelor", "Associate", "Some College",  "High School", "No High School")) + 
+  scale_fill_discrete(
+    labels = c("Graduate","Bachelor", "Associate", "Some College",  "High School", "No High School")) + 
   scale_x_discrete (labels = c("female" = "Female", "male" = "Male")) +
   
   scale_y_continuous(labels = scales::percent)
@@ -1266,7 +1268,7 @@ E_singF_race_plot
 
 
 # Household Age
-```{r Cost Burdened Status by Age}
+```{r Cost Burdened Status by Age, eval=FALSE}
 
 
 cost_burden_age_sf %<>% drop_na(cost_burden) #this will need to be run once and then left alone if tweaking graphs
@@ -1295,12 +1297,15 @@ cost_burden_age_sf_plot <- cost_burden_age_sf_plot +
 cost_burden_age_sf_plot
 
 ```
+## Cost Burdened Status by Age and Earner Type {.tabset}
+
+### Female Single Earner
 
 ```{r  Cost Burdened Stage by Age/Race}
 
-#x-axis...not legible on Josh's comp
 
-temp_df <- cost_burden_age_sf %>%
+temp_df1 <- cost_burden_age_sf %>%
+  filter(earner_type_d == "single_fem_earner") %>%
   mutate(
     age_group = case_when(
       age %in% 15:19 ~ NA_character_, 
@@ -1312,11 +1317,14 @@ temp_df <- cost_burden_age_sf %>%
       age %in% 70:79 ~ "70-79", 
       age >= 80 ~ "80+"))
 
-cost_burden_age_sf_facet_plt <- ggplot(temp_df,
+temp_df1 %<>%  filter(!is.na(age_group))
+
+cost_burden_age_sf_facet_plt <- ggplot(temp_df1,
        aes(x=age_group, y=HHWT , fill=cost_burden),
         color="#00A9B7") +
-geom_bar(stat="identity", position='fill')+
-facet_wrap(~earner_type_d)
+geom_bar(stat="identity", position='fill')
+  
+#facet_wrap(~earner_type_d)
 
 cost_burden_age_sf_facet_plt <- cost_burden_age_sf_facet_plt + glp_graph_theme
 
@@ -1342,6 +1350,95 @@ cost_burden_age_sf_facet_plt
 
 
 
+```
+### Male Single Earner
+```{r}
+temp_df2 <- cost_burden_age_sf %>%
+  filter(earner_type_d == "single_male_earner") %>%
+  mutate(
+    age_group = case_when(
+      age %in% 15:19 ~ NA_character_, 
+      age %in% 20:29 ~ "20-29", 
+      age %in% 30:39 ~ "30-39",  
+      age %in% 40:49 ~ "40-49",  
+      age %in% 50:59 ~ "50-59",  
+      age %in% 60:69 ~ "60-69", 
+      age %in% 70:79 ~ "70-79", 
+      age >= 80 ~ "80+"))
+
+temp_df2 %<>%  filter(!is.na(age_group))
+
+cost_burden_age_sf_facet_plt <- ggplot(temp_df2,
+       aes(x=age_group, y=HHWT , fill=cost_burden),
+        color="#00A9B7") +
+geom_bar(stat="identity", position='fill')
+  
+#facet_wrap(~earner_type_d)
+
+cost_burden_age_sf_facet_plt <- cost_burden_age_sf_facet_plt + glp_graph_theme
+
+cost_burden_age_sf_facet_plt <- cost_burden_age_sf_facet_plt + 
+    theme(
+    legend.position = "right",
+    
+    strip.text = element_text(size = 40)
+    ) +
+  labs(
+  title = "Cost Burdened Status by Age and Earner Type",
+) + 
+  ylab(" ") +
+  xlab(" ") +
+  scale_fill_discrete(labels = c("Non Cost Burdened", "Cost Burdened")) + 
+  scale_x_discrete(guide = guide_axis(n.dodge=2)) +
+
+  scale_y_continuous(labels = scales::percent)
+
+cost_burden_age_sf_facet_plt
+```
+
+### Multiple Earner
+```{r}
+temp_df3 <- cost_burden_age_sf %>%
+  filter(earner_type_d == "multiple_earner") %>%
+  mutate(
+    age_group = case_when(
+      age %in% 15:19 ~ NA_character_, 
+      age %in% 20:29 ~ "20-29", 
+      age %in% 30:39 ~ "30-39",  
+      age %in% 40:49 ~ "40-49",  
+      age %in% 50:59 ~ "50-59",  
+      age %in% 60:69 ~ "60-69", 
+      age %in% 70:79 ~ "70-79", 
+      age >= 80 ~ "80"))
+  
+temp_df3 %<>% filter(!is.na(age_group))
+
+cost_burden_age_sf_facet_plt <- ggplot(temp_df3,
+       aes(x=age_group, y=HHWT , fill=cost_burden),
+        color="#00A9B7") +
+geom_bar(stat="identity", position='fill')
+  
+#facet_wrap(~earner_type_d)
+
+cost_burden_age_sf_facet_plt <- cost_burden_age_sf_facet_plt + glp_graph_theme
+
+cost_burden_age_sf_facet_plt <- cost_burden_age_sf_facet_plt + 
+    theme(
+    legend.position = "right",
+    
+    strip.text = element_text(size = 40)
+    ) +
+  labs(
+  title = "Cost Burdened Status by Age and Earner Type",
+) + 
+  ylab(" ") +
+  xlab(" ") +
+  scale_fill_discrete(labels = c("Non Cost Burdened", "Cost Burdened")) + 
+  scale_x_discrete(guide = guide_axis(n.dodge=2)) +
+
+  scale_y_continuous(labels = scales::percent)
+
+cost_burden_age_sf_facet_plt
 ```
 
 # Earner Types Over Time
