@@ -464,6 +464,8 @@ gt(single_earner_pctiles) %>%
 
 ## Income by Gender {.tabset}
 
+For single-adult households, a living wage is \$33k for a single adult, \$66k for an adult with one child, \$84k for an adult with two children, and $112k for one adult and one child.
+
 ### Counts
 ```{r}
 p <- lville_2019 %>% 
@@ -511,7 +513,7 @@ temp_df <- lville_2019 %>%
                                    color = sex, 
                                    weight = HHWT)) +
     geom_histogram(alpha=0.5, position = 'identity', binwidth = 10000) +
-    scale_fill_manual(values = c("#0E4A99", "#F58021", "#00A9B7")) +
+    scale_fill_manual(values = c"#0E4A99", "#F58021", "#00A9B7")) +
     scale_color_manual(values = c("#0E4A99", "#F58021", "#00A9B7")) +
 
     labs(fill="") +
@@ -812,11 +814,11 @@ under_liv_wage_0 <- census_microdata081122 %>%
     sex == 'female',
     NCHILD == 0,
     earner_type == 'single_earner') %>%
-  group_by(HHINCOME < 30303.98) %>%
+  group_by(HHINCOME < 33321.6) %>%
   summarize(count = sum(HHWT)) #a little more than half are earning a living wage
 #do this for each graphof this type...add info above chunk
 
-no_kids_female_earner <- func_income_by_kids(0, 30303.98)
+no_kids_female_earner <- func_income_by_kids(0, 33321.6)
 no_kids_female_earner <- no_kids_female_earner + 
   labs(
   title = "Female Single Earner Income, No Children",
@@ -835,10 +837,10 @@ under_liv_wage_1 <- census_microdata081122 %>%
     sex == 'female',
     NCHILD == 1,
     earner_type == 'single_earner') %>%
-  group_by(HHINCOME < 60264.75) %>%
+  group_by(HHINCOME < 66081.6) %>%
   summarize(count = sum(HHWT))
 
-one_child <- func_income_by_kids(1, 60264.75)
+one_child <- func_income_by_kids(1, 66081.6)
 one_child <- one_child + 
   labs(
   title = "Female Single Earner Income, One Child",
@@ -860,10 +862,10 @@ under_liv_wage_2 <- census_microdata081122 %>%
     sex == 'female',
     NCHILD == 2,
     earner_type == 'single_earner') %>%
-  group_by(HHINCOME < 76451.81) %>%
+  group_by(HHINCOME < 83990.4) %>%
   summarize(count = sum(HHWT))
 
-two_child <- func_income_by_kids(2, 76451.81)
+two_child <- func_income_by_kids(2, 83990.4)
 two_child <- two_child + 
   labs(
   title = "Female Single Earner Income, Two Children",
@@ -875,6 +877,7 @@ two_child
 ```
 
 ### Single Female Earner with Three Children
+
 ```{r}
 under_liv_wage_3 <- census_microdata081122 %>% 
   filter(
@@ -883,10 +886,10 @@ under_liv_wage_3 <- census_microdata081122 %>%
     sex == 'female',
     NCHILD == 3,
     earner_type == 'single_earner') %>%
-  group_by(HHINCOME < 101452.61) %>%
+  group_by(HHINCOME < 111529.6) %>%
   summarize(count = sum(HHWT))
 
-three_child <- func_income_by_kids(3, 101452.61)
+three_child <- func_income_by_kids(3, 111529.6)
 three_child <- three_child + 
   labs(
   title = "Female Single Earner Income With Three Children",
@@ -1507,8 +1510,6 @@ E_singM_singF_plot <- E_singM_singF_plot +
   labs(
   title = "Single Earner Education Levels by Gender",
 ) + 
-  ylab(" ") +
-  xlab(" ") +
   scale_fill_discrete(
     labels = c("Graduate","Bachelor", "Associate", "Some College",  "High School", "No High School")) + 
   scale_x_discrete (labels = c("female" = "Female", "male" = "Male")) +
@@ -1766,5 +1767,20 @@ earner_trend_plt <- earner_trend_plt +
   scale_y_continuous(labels = scales::percent)
 
 earner_trend_plt
+```
+
+
+## Ranking with Children
+
+```{r Ranking Single Female with Kids Homeownership}
+
+ranking(H_sinFem_kids,
+        'homeownership',
+        plot_title = "Single Earner Female Homeownership with Children",
+        #title_scale = 0.8,
+        caption_text = 
+      "Source: Greater Louisville Project
+       Data from GLP analysis of ACS microdata from IPUMS-USA")
+
 ```
 
