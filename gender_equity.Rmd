@@ -298,20 +298,70 @@ save(H_gen_trend, H_earntype, H_singFem_rank, H_sinFem_kids, H_s_Femkids_trend, 
 load("clean_svybydemog_data.RData")
 ```
 
-Gender equity in Louisville is an unfortunately unequal reality. Women are worse off in key standard of living areas such as household income and home-ownership. Additionally, these issues are exasperated for women from a one-income home, women with children and minority women. Disproportionate cost of living burdens and care-taking responsibilities can perpetuate a viscous cycle of inequity. Understanding the true size of the 'equity gap' can help inform policy decisions to stop this cycle from continuing.  
+Gender equity in Louisville is an unfortunately unequal reality. Women are worse off in key standard of living areas such as household income and homeownership. Additionally, these issues are exasperated for women from a one-income home, women with children, and minority women. Disproportionate cost of living burdens and care-taking responsibilities can perpetuate a viscous cycle of inequity. Understanding the true size of the 'equity gap' can help inform policy decisions to stop this cycle from continuing.  
+
+Key definitions:
+
+* **Cost-burdened household** - when a household has to pay more than *30%* of their income toward housing costs (including rent, utilities, mortgage payments, and any other homeownership costs.)
+* **Severely cost-burdened household** - when a household has to pay more than *50%* of their income toward housing costs.
+* **Single-income household** and **Multiple-earner household** - A single-income household has only one wage earner, while a multiple-earner household includes multiple earners. Throughout the data, we usually group households into three groups:
+  + Multiple-earner households
+  + Single-earner, female-headed households
+  + Single-earner, male-headed households
+
 
 Key Takeaways:
 
-1. Women in Louisville, especially women from a one-income household make significantly less money than men from a one-income household.
-2. For women in Louisville from a one-income household, as the number of children in the household increases the fewer women earn a living wage.
-3. An overwhelming majority of women from a one-income home .
-4. Women in Louisville from a one-income household who pay at least 30% of their income in home expenses (rent or mortgage, utilities) rarely earn more than $70,000.
-5. Compared to peer cities, Louisville has relatively high home ownership for women from a one-income household with no children. However, for women from a one-income household with children, we are second to last. Additionally, homeownership for women from a one-income household with children has been steadily decreasing since 2016. 
-6. Homeownership issues for women from a one-income household are increased for minority women, with black women having the lowest ownership rates. 
+1. Women and men in single-income households have very similar rates of homeownership in Louisville. 
+2. On average, women in single-income households make significantly less money on average than men from single-income households. As a result, almost half of Louisville women in single-income households are cost-burdened, putting them at increased risk of eviction or foreclosure.
+3. Around 43% of women in single-income households earn a living wage that covers their basic expenses (around \$30,000.) However, that number is only around 10% for single-income women with a child, only around 5% for single-income women with two children, and near 0% for single-income women with three or more children.
+4. Compared to peer cities, Louisville has relatively high homeownership for women in single-income households with no children. However, for single-income women with children, we are second to last. Additionally, homeownership for women from a one-income household with children has been steadily decreasing since 2016. 
+5. Homeownership for single-income women is much lower for women of color.
 
 
+Rolling mean explanation
+
+Race categories explanation
+
+GLP strives to use inclusive language and analyze data for traditionally underrepresented groups whenever possible. However, current data has its limitations. The terminology we use to describe race, sex, gender, and other identities mirrors the way questions were asked in the U.S. Census Bureau's American Community Survey. Additionally, the survey does not provide us with enough information to create data on many populations in Louisville. When we break data down by race, we include data for white non-Hispanic residents, Black non-Hispanic residents, and Hispanic residents.
+
+Gender:   
+> What is Person X's sex? Mark (X) ONE box.
+>
+> [ ] Male
+> [ ] Female
+
+Race 
+>Is Person X of Hispanic, Latino, or Spanish origin?
+>
+>[ ] No, not of Hispanic, Latino, or Spanish origin
+>[ ] Yes, Mexican, Mexican Am., Chicano
+>[ ] Yes, Puerto Rican
+>[ ] Yes, Cuban
+>[ ] Yes, another Hispanic, Latino, or Spanish origin -- Print origin, for example, Argentinean, Colombian, Dominican, Nicaraguan, Salvadoran, Spaniard, and so on. --> ______________________________________
+
+>What is Person X's race? Mark (X) one or more boxes.
+>
+>[ ] White
+>[ ] Black or African Am.
+>[ ] American Indian or Alaska Native -- Print name of enrolled or principal tribe. --> __________________
+>[ ] Asian Indian
+>[ ] Japanese
+>[ ] Native Hawaiian
+>[ ] Chinese
+>[ ] Korean
+>[ ] Guamanian or Chamorro
+>[ ] Filipino
+>[ ] Vietnamese
+>[ ] Samoan
+>[ ] Other Asian -- Print race, for example, Hmong, Laotian, Thai, Pakistani, Cambodian, and so on. --> _____________________
+>[ ] Other Pacific Islander – Print race, for example, Fijian, Tongan, and so on. -->______________________
+>[ ] Some other race -- Print race. -->
+>____________________________________________________
 
 
+Data are often scarce for Hispanic and Latinx populations, as well for the LGBTQ+
+population. National data we collect–for measures such as overdoses and certificates–are often unavailable at the zip code or neighborhood levels. 
 
 
 
@@ -339,6 +389,28 @@ earn_type <- waffle_data %>%
   group_by(sex, earner_type)  %>%
   summarize(n = sum(cb_homeowner), .groups = "drop") %>%
   mutate(pct = n / sum(n) * 100)
+
+earn_type <- waffle_data %>%
+  filter(
+    race == "total",
+    sex != "total",
+    var_type == "estimate") %>%
+  group_by(sex, earner_type)  %>%
+  summarize(n = sum(cb_homeowner + noncb_homeowner),
+            total = sum(cb_homeowner + noncb_homeowner + cb_renter + noncb_renter),
+            .groups = "drop") %>%
+  mutate(pct = n / sum(total) * 100)
+
+earn_type <- waffle_data %>%
+  filter(
+    race == "total",
+    sex != "total",
+    var_type == "estimate") %>%
+  group_by(sex, earner_type)  %>%
+  summarize(n = sum(cb_homeowner + cb_renter),
+            total = sum(cb_homeowner + noncb_homeowner + cb_renter + noncb_renter),
+            .groups = "drop") %>%
+  mutate(pct = n / sum(total) * 100)
   
 demog_data <- data.frame(
   row_num = rep(1:10, each = 10),
@@ -346,12 +418,16 @@ demog_data <- data.frame(
   gender = c(rep("male", 52), rep("female", 48)),
   earn_type = c(rep("multi_earn", 28), rep("single_earn", 20), rep("multi_earn", 29), rep("single_earn", 23)))
 
-g1 <- ggplot(demog_data, aes(x = row_num, y = col_num, color = gender)) + 
-  geom_point(size = 10) 
 
-g2 <- ggplot(demog_data, aes(x = row_num, y = col_num, color = earn_type)) + 
+png("test1.png")
+ggplot(demog_data, aes(x = row_num, y = col_num, color = gender)) + 
   geom_point(size = 10) 
+dev.off()
 
+png("test2.png")
+ggplot(demog_data, aes(x = row_num, y = col_num, color = earn_type)) + 
+  geom_point(size = 10) 
+dev.off()
 
 library(shiny)
 library(scrollytell)
@@ -361,40 +437,73 @@ library(plotly)
 
 ui <- fluidPage(
 
-    # Application title
-    titlePanel("Scrolly Telling"),
-    sidebarLayout( sidebarPanel("Hi"),
-    tabsetPanel(
-      id="tab",
-      tabPanel(
-        "bla",
-        fluidRow(h2("Hi")),
-        fluidRow(
-        scrolly_container(
-          "scr",
-          scrolly_sections(
-            scrolly_section(id = 1, plotOutput("plot1")),
-            scrolly_section(id = 2, plotOutput("plot2"))
-             )
-        )
-            ))
-      )
-    ),
-    div("Footer")
-)
+  # Application title
+  fluidRow(h2("Hi")),
+  fluidRow(
+   fluidRow(id='text',
+        column(2),
+        column(8, 
+               br(),
+               HTML("<p><span style='font-size:30px'><b>Basketball fans</b></span>. If you could travel to a place and time where local teams (at every level) were at the center of the basketball discussion, where and when would it be?
+               <br><br>
+               For me, that question's easy. I lived it. Growing up in Michigan and reaching peak basketball fandom in the late 1980's and early 1990's, I witnessed championship caliber basketball on multiple levels. The Detroit Pistons' group of <a href='http://www.espn.com/30for30/film/_/page/badboys' target='_blank'>Bad Boys</a> were winning back-to-back titles in the NBA, and the University of Michigan's <a href='http://www.espn.com/watch/film/932e63d5-df33-4303-bc0f-590f6037b3a9/the-fab-five' target='_blank'>Fab Five</a> were all the rage in the NCAA.
+<br><br>
+While these teams were collecting wins and polarizing their respective leagues, another team, soon to be assembled, would unite basketball fans across the country. Prior to the 1992 Summer Olympics, rules dictated that men's basketball teams had to be comprised of amateurs and/or non-NBA professionals. As a result, the United States gathered the country's top collegiate talent to compete on the global stage, often against international teams made up of professionals. During the summer of 1992, however, everything changed. The ban on NBA players was lifted, and Team USA assembled it's first roster composed entirely of NBA players (well, one college player), aptly referred to as The Dream Team.</p>"),
+               br()
+        ),
+        column(2)
+),
+    
+     # Scrolly container
+     scrolly_container(
+       "scr",
+        scrolly_graph(
+          br(),
+          br(),
+          div(imageOutput("main_image"))),
+       scrolly_sections(
+         scrolly_section(
+           id = 1,
+           div(HTML("<H2> No education credentials </H2>
+        <br> <p> Workers with <font color='#A00042'>no formal education credential</font> have a median income of $25,636.
+        <br> On average, those occupations have a <b>90% chance</b> of job automation.
+        <br><br> There are 23,765,700 workers with <font color='#A00042'>no formal education credential</font>.<p>"))),
+         scrolly_section(
+           id = 2,
+           div(HTML("<H2> High school diplomas </H2>
+        <br> <p>Workers with <font color='#F56C42'>high school diplomas</font> have a median income of $25,636.
+        <br> On average, those occupations have a <b>60% chance</b> of job automation.
+        <br><br> There are 33,129,910 workers with a <font color='#F56C42'>high school diploma</font>.<p>"))),
+         scrolly_section(id = 3,
+           div(br()))))))
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
 
-    output$scr <- renderScrollytell({scrollytell()})
-    output$section <- renderText(paste0("Section: ", input$scr))
-
-    output$plot1 <- renderPlot(g1)
-    output$plot2 <- renderPlot(g2)
+  roster.rx <- reactiveValues(scr = NULL)
+  
+  output$main_image <- renderImage({
+    add <- input$scr
     
-    observe({cat("section:", input$scr, "\n")})
+    print(getwd())
+    print(roster.rx$scr)
+    print(add)
+    
+    
+    image_name <- paste0("test", add, ".png")
+    img(src = "www/test1.png",
+        contentType = 'image/png',
+         width = 400,
+         height = 300)
+    
+  })
+  
 }
 
+    img(src = "www/test1.png",
+        contentType = 'image/png',
+         width = 400,
+         height = 300)
 shinyApp(ui, server, options = list(height = 500))
 ```
 
