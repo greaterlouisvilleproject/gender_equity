@@ -1,0 +1,13 @@
+name: gender_demogs
+title: gender_demogs
+username:
+account: greaterlou
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 7171045
+bundleId: 6356191
+url: https://greaterlou.shinyapps.io/gender_demogs/
+when: 1664549248.38107
+lastSyncTime: 1664549248.38108
+asMultiple: FALSE
+asStatic: FALSE
