@@ -136,7 +136,6 @@ census_microdata081122_person <- read_feather("raw_data/census_data_8_11_22.feat
 ```{r clean data, include= FALSE}
 # To classify the housing data into homeowners, renters, cost-bu
 #also create income brackets, earner types
-
 if ("census_microdata081122_processed.feather" %in% list.files("raw_data")) {
   census_microdata081122 <- arrow::read_feather("raw_data/census_microdata081122_processed.feather")
   census_microdata081122_person <- arrow::read_feather("raw_data/census_microdata081122_person_processed.feather")
@@ -200,12 +199,12 @@ if ("census_microdata081122_processed.feather" %in% list.files("raw_data")) {
       earner_type = case_when(
         HHINCOME == 0 ~ 'no_earnings',
         any(INCTOT >= 0.95 * HHINCOME) ~ 'single_earner',
-        TRUE ~ 'multi_earner'),
+        TRUE ~ 'multiple_earner'),
   
       earner_type_d = case_when(
         sex == 'female' & earner_type == 'single_earner' ~ 'single_fem_earner',
         sex == 'male' & earner_type == 'single_earner' ~ 'single_male_earner',
-        earner_type == 'multi_earner' ~ 'multiple_earner'),
+        earner_type == 'multiple_earner' ~ 'multiple_earner'),
         
         num_children = sum(age < 18),
       
@@ -1129,8 +1128,7 @@ prop.table(table(kid_howner$kd_pres)) #0.3379953 women homeowners have kids
 
 #also compares earner types
 temp_df <- H_earntype %>%
-  filter(race == 'total',
-         var_type == "percent", sex == "total") %>%
+  filter(race == 'total') %>%
   pivot_wider(names_from = "earner_type_d", values_from = "homeownership")
 
 trend(temp_df, 
@@ -1155,7 +1153,6 @@ trend(temp_df,
 H_earntype_kids %<>%
   filter(
     var_type == 'percent',
-    race == 'total',
     sex == "female") %>%
   pivot_wider(names_from = 'kd_pres', values_from = 'homeownership') %>%
   select(-sex)
@@ -1176,16 +1173,8 @@ trend(H_earntype_kids,
 ### Without children
 
 ```{r Ranking Single Female Homeownership}
-
-temp_df <- H_earntype_kids %>% 
-  filter(earner_type_d == "single_fem_earner",
-         var_type == "percent", 
-         sex == "total",
-         kd_pres == "no_kids") %>%
-  mutate(sex = "total")
-
-ranking(temp_df, 
-        'homeownership',
+ranking(H_earntype_kids, 
+        'no_kids',
         plot_title = "Single Earner Female Homeownership",
         caption_text = 
       "Source: Greater Louisville Project
@@ -1197,16 +1186,8 @@ ranking(temp_df,
 ### Ranking with Children
 
 ```{r Ranking Single Female with Kids Homeownership}
-
-temp_df <- H_earntype_kids %>% 
-  filter(earner_type_d == "single_fem_earner",
-         var_type == "percent", 
-         sex == "total",
-         kd_pres == "kids") %>%
-  mutate(sex = "total")
-
-ranking(temp_df,
-        'homeownership',
+ranking(H_earntype_kids,
+        'kids',
         plot_title = "Single Earner Female Homeownership with Children",
         #title_scale = 0.8,
         caption_text = 
@@ -1218,12 +1199,7 @@ ranking(temp_df,
 ## by Race
 
 ```{r Trend in Single Female Homeownership by Race}
-
-temp_df <- H_earntype_kids %>%
-  filter(earner_type_d == "single_fem_earner",
-         var_type == "percent", sex == "total")
-
-trend(filter(temp_df), 
+trend(filter(H_earntype, earner_type_d == "single_fem_earner"), 
       homeownership, 
       rollmean = 5,
       pctiles = F,
@@ -1242,14 +1218,8 @@ trend(filter(temp_df),
 
 ```{r Trend in Single Female Homeownership by Race with and without kids}
 
-temp_df <- H_earntype_kids %>%
-  filter(earner_type_d == "single_fem_earner",
-         var_type == "percent", 
-         sex == "total",
-         kd_pres == "kids")
-
-trend(filter(temp_df, race != "hispanic"), 
-      homeownership, 
+trend(H_earntype_kids, 
+      kids, 
       rollmean = 5,
       pctiles = F,
       plot_title = "Single Female Homeownership by Year with Children", 
@@ -1264,15 +1234,8 @@ trend(filter(temp_df, race != "hispanic"),
 ### Without Children
 
 ```{r}
-
-temp_df <- H_earntype_kids %>%
-  filter(earner_type_d == "single_fem_earner",
-         var_type == "percent", 
-         sex == "total",
-         kd_pres == "no_kids")
-
-trend(filter(temp_df, race != "hispanic"), 
-      homeownership, 
+trend(H_earntype_kids, 
+      no_kids, 
       rollmean = 5,
       pctiles = F,
       plot_title = "Single Female Homeownership by Year without Children", 
@@ -1675,8 +1638,8 @@ earner_trend_plt
 
 ```{r Ranking Single Female with Kids Homeownership2}
 
-ranking(H_sinFem_kids,
-        'homeownership',
+ranking(H_earntype_kids,
+        'kids',
         plot_title = "Single Earner Female Homeownership with Children",
         #title_scale = 0.8,
         caption_text = 
