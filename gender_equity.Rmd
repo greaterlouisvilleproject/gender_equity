@@ -220,8 +220,8 @@ if ("census_microdata081122_processed.feather" %in% list.files("raw_data")) {
     filter((earner_type == "single_earner" & INCTOT >= 0.95 * HHINCOME) | 
              (earner_type == "multiple_earner" & PERNUM == 1))
   
-  arrow::write_feather(census_microdata081122, "census_microdata081122_processed.feather")
-  arrow::write_feather(census_microdata081122_person, "census_microdata081122_person_processed.feather")
+  arrow::write_feather(census_microdata081122, "raw_data/census_microdata081122_processed.feather")
+  arrow::write_feather(census_microdata081122_person, "raw_data/census_microdata081122_person_processed.feather")
 }
 
   
