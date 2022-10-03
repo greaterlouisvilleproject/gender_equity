@@ -229,6 +229,8 @@ if ("census_microdata081122_processed.feather" %in% list.files("raw_data")) {
 
 ``` {r louisville 2019 data, include = FALSE}
 
+
+
 lville_2019 <- census_microdata081122 %>% 
   filter(FIPS == '21111',
          year == '2019')
@@ -244,6 +246,37 @@ cost_burden_age_sf <- census_microdata081122 %>%
 
 
 ```
+
+
+```{r}
+
+
+# Inctest = HHINCOME *0.95
+# 
+# Single_earner_1 = INCTOT >= INCTEST
+# single_earner_2 = any(Single_earner_1)
+
+# new_df <- lville_2019 %>%
+#   mutate(
+#   
+#   earner_var = if_else(HHINCOME <= (0.95*INCTOT) , "single_earner", "multi_earner")
+#   )
+# 
+#   
+#     earner_var = case_when(
+#     HHINCOME == 0 ~ 'no_earnings',
+#     INCTOT >= 0.65 * HHINCOME ~ "single_earner",
+#     TRUE ~ "multi_earner"
+#     )
+#   )
+
+
+      # earner_type = case_when(
+      #   HHINCOME == 0 ~ 'no_earnings',
+      #   any(INCTOT >= 0.90 * HHINCOME) ~ 'single_earner',
+      #   TRUE ~ 'multi_earner'
+```
+
 
 ```{r Saves Survey By Demographic Data Frames, include=FALSE, eval=FALSE}
 
@@ -398,7 +431,7 @@ knitr::include_url("https://greaterlou.shinyapps.io/gender_demogs/", height = "2
 t_df <- census_microdata081122 %>%
   filter(sex == "female")
 
-prop.table(table(t_df$earner_type))
+prop.table(table(t_df$earner_type_d))
 
 #single earner vs multi earner who women who happen to be head of household
 #should we remove head of household filter?
@@ -415,6 +448,9 @@ cut_95 = quantile(lville_2019$HHINCOME, probs = 0.95)
 
 ```
 
+This section will display income levels for single earner males, females, and multiple demographic and household makeups for single females earners. 
+
+Disparity between single earner male and female wages is significant in Louisville. In 2019, 50% of males in Louisville made at least \$45,000 while this values is only \$30,000 for females. This disparity increases as wages rise, wealthiest 10% of males earn at least \$120,000 while females in the same income bracket earn at least \$71,000. 
 ```{r 2019 Louisville Men and Women Income Compared, eval=FALSE}
 
 #fix formatting
@@ -458,8 +494,6 @@ gt(single_earner_pctiles) %>%
 
 ## by Gender
 
-For single-adult households, a living wage is \$33k for a single adult, \$66k for an adult with one child, \$84k for an adult with two children, and $112k for one adult and one child.
-
 ```{r}
 p <- lville_2019 %>% 
   filter(HHINCOME <= cut_95,
@@ -488,7 +522,13 @@ scale_x_continuous(
   breaks = c(50000, 100000, 150000, 200000),
   label = c("$50k", "$100k", "$150k", "$200k")
 ) +
-  scale_y_continuous(labels = scales::comma)
+  scale_y_continuous(labels = scales::comma) +
+  
+  scale_color_manual(values=c("#f58021", "#00a9b7"))+
+  
+  scale_fill_manual(
+    values = c("#f58021", "#00a9b7"), 
+    labels = c("Female", "Male"))
 
 p
 ```
@@ -506,7 +546,7 @@ temp_df <- lville_2019 %>%
                                    color = sex, 
                                    weight = HHWT)) +
     geom_histogram(alpha=0.5, position = 'identity', binwidth = 10000) +
-    scale_fill_manual(values = c"#00A9B7", "#F58021")) +
+    scale_fill_manual(values = c("#00A9B7", "#F58021")) +
     scale_color_manual(values = c("#00A9B7", "#F58021")) +
 
     labs(fill="") +
@@ -541,6 +581,10 @@ p_percent
 ```
 
 ## by Age
+
+-this seems wrong...shouldn't the groups be flippled logically?...also there arent any multiple earners if you examine the dataframe
+Single and multiple income households follow a similar pattern of earnings with highest earnings seen between 40 and 49 years of age. 
+
 ```{r Median Income for Earning Group by Age}
 
 I_median_earn_age <- lville_2019 %>%
@@ -562,8 +606,8 @@ I_median_earn_age_plot <- I_median_earn_age_plot +
   
   scale_y_continuous(labels = scales::dollar) +   
   scale_fill_manual(
-    values = c("#0E4A99", "#F58021", "#00A9B7"), 
-    labels = c("Multiple Earner", "Single Female Earner", "Single Male Earner"))
+    values = c("#0E4A99", "#F58021"), 
+    labels = c("Multiple Earner", "Single Female Earner"))
 
   
 I_median_earn_age_plot
@@ -571,6 +615,10 @@ I_median_earn_age_plot
 ```
 
 ## by Race {.tabset}
+
+When examining single earner females broken down by race it becomes apparent that for non-white females it is significantly less likely to see wages about \$50,000. 
+
+Only wages under \$150,000 are displayed because of the small number of instances any female single earners make over $150,000.
 
 ```{r, include=FALSE}
 
@@ -734,6 +782,8 @@ other_female_earner
 ```
 
 ## Compared to a Living Wage {.tabset}
+
+For single-adult households, a living wage is \$33k for a single adult, \$66k for an adult with one child, \$84k for an adult with two children, and $112k for one adult and three children.
 
 ```{r}
 func_income_by_kids <- function(num_kids, living_wage) {
@@ -926,8 +976,12 @@ under_liv_wage_3_age <- age_liv_wage(3, 101452.61) #32.7
 
 # Cost Burden {.tabset}
 
+Add cost burden definition reminder?
+
+
 ### by Income
 
+Visualizing cost burden status by household income provides a clear indication that very few single female earners are cost burdened when earning at least \$70,000. For reference, %50 of single female earners in Louisville make less than \$30,000.
 ```{r}
 
 
@@ -964,8 +1018,8 @@ cost_burden_sf_plot <- ggplot(temp_df,
        aes(x = inc_bins,
            y = percent,
            group = 1)) +
-  geom_line(linetype = "dashed", color="purple", size=3) +
-  geom_point(color="purple", size=8)
+  geom_line(linetype = "dashed",  color="chartreuse4", size=3) +
+  geom_point(color="chartreuse4", size=8)
 
 cost_burden_sf_plot <- cost_burden_sf_plot + glp_graph_theme
 
@@ -983,7 +1037,6 @@ cost_burden_sf_plot <- cost_burden_sf_plot +
 
   )  +
 
-  scale_color_manual(values = c("#0E4A99")) +
   scale_y_continuous(labels = scales::percent)
 
 cost_burden_sf_plot
@@ -991,6 +1044,7 @@ cost_burden_sf_plot
 
 ### by Age 
 
+While cost burden status does appear to decrease on average for single female earners as their age increases, there is significant room for improvement. Notice that a significant portion of individuals in their twenties face cost burden status and after single female earners reach their 60's cost burden status begins to increase again.  
 ```{r  Cost Burdened Stage by Age/Race}
 cost_burden_age_sf %<>% drop_na(cost_burden) #this will need to be run once and then left alone if tweaking graphs
 
@@ -1025,7 +1079,7 @@ cost_burden_age_sf_facet_plt <- cost_burden_age_sf_facet_plt +
     strip.text = element_text(size = 40)
     ) +
   labs(
-  title = "Cost Burdened Status by Age and Earner Type",
+  title = "Cost Burdened Status by Age"
 ) + 
   ylab(" ") +
   xlab(" ") +
@@ -1044,6 +1098,7 @@ cost_burden_age_sf_facet_plt
 
 ## Over Time
 
+While Louisville does fair better than its peer cities with less cost burdened single female earners, there is significant room for improvement in terms of closing the gap between single female and male earners. 
 ```{r Cost-burdened by earner type Trend }
 
 CB_earntype %<>%
@@ -1081,6 +1136,7 @@ ungroup()%>%
 
 
 # Homeownership {.tabset}
+Overall, 32% of homeowners in Louisville are female with and average age of 64. - ask harrison about this
 
 ## by demographic
 
@@ -1090,7 +1146,13 @@ ungroup()%>%
 w_howner <- lville_2019 %>%
   filter(sex == "female")
 
-prop.table(table(w_howner$homeownership)) #0.7017448 are home owner
+prop.table(table(w_howner$homeownership)) 
+```
+
+```{r, eval = FALSE}
+#all homeownership
+
+prop.table(table(lville_2019$homeownership, lville_2019$sex)) 
 ```
 
 ```{r, eval = FALSE}
@@ -1107,7 +1169,7 @@ female_age_howner <- lville_2019 %>%
     ninety_pct = Hmisc::wtd.quantile(age, HHWT, probs = 0.9),
     avg = mean(age))
 
-female_age_howner #avg age for female homeowner is 57.92618
+female_age_howner #avg age for female homeowner is 64.06362
 
 ```
 
@@ -1124,6 +1186,8 @@ prop.table(table(kid_howner$kd_pres)) #0.3379953 women homeowners have kids
 
 ```
 
+
+It is clear that having multiple household incomes significantly increases the ability to own a home. On average, single female home ownership has declined in Louisville since 2007. 
 ```{r Trend in Homeownership by Gender}
 
 #also compares earner types
@@ -1144,10 +1208,11 @@ trend(temp_df,
 
 ```
 
-## by presence of kids {.tabset}
+## by presence of children {.tabset}
 
 ### trend
 
+For women in Louisville with children home ownership rates are drastically lower than rates for women without children. Additionally, the female home onwership rate with children has steadily decreased since 2014. 
 ```{r Trend in Homeownership by for Single Females with vs. without Kids}
 
 H_earntype_kids %<>%
@@ -1198,6 +1263,7 @@ ranking(H_earntype_kids,
 
 ## by Race
 
+There is a significant disparity in home ownership rates for non-white female single earners. Black single female earners have seen a steady decrease since 2007. 
 ```{r Trend in Single Female Homeownership by Race}
 trend(filter(H_earntype, earner_type_d == "single_fem_earner"), 
       homeownership, 
@@ -1214,6 +1280,7 @@ trend(filter(H_earntype, earner_type_d == "single_fem_earner"),
 
 ## by Race and Children {.tabset}
 
+A similar trend to the overall average is scene for each demographic when comparing home ownership rates for females with and without children - rates are lower for females with children. 
 ### With Children
 
 ```{r Trend in Single Female Homeownership by Race with and without kids}
@@ -1291,6 +1358,9 @@ val
 ## Education Level {.tabset}
 
 ### By Gender
+
+Compared to single male earners, single female earners see a smaller percentage of individuals with High School Degree but larger percentages of individuals with Bachelor or Graduate degrees.  
+
 ```{r}
 E_singM_singF <- census_microdata081122_person %>% 
   filter(year %in% 2017:2019, 
@@ -1336,6 +1406,8 @@ E_singM_singF_plot
 
 
 ### By presence of Children
+
+--because they are so similar can we make this just for females? 
 ```{r}
 
 
@@ -1370,7 +1442,7 @@ E_singM_singF_plot <- E_singM_singF_plot +
     ) +
 
   labs(
-  title = "Single Earner Education Levels by Gender and Childrens",
+  title = "Single Earner Education Levels by Gender and Children",
 ) + 
   ylab(" ") +
   xlab(" ") +
@@ -1400,10 +1472,10 @@ E_singF_race <- lville_2019 %>%
                   ordered = TRUE))
 
 ggplot(E_singF_race, aes(x = "", y = rate, fill = educ)) +
-  geom_bar(stat="identity", width=1, color="white") +
+  geom_bar(stat="identity", width=2, color="white") +
   geom_text(aes(label = scales::percent(rate, scale = 1, accuracy = 0.1)),
             position = position_stack(vjust = 0.5),
-            size = 24,
+            size = 10,
             color = "white") +
   coord_polar("y", start=0) +
   
