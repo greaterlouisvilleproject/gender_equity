@@ -130,8 +130,7 @@ write_feather(census_data, "raw_data/census_data_8_11_22.feather")
 census_microdata081122_person <- read_feather("raw_data/census_data_8_11_22.feather") 
 
 ```
-
-
+  
 
 ```{r clean data, include= FALSE}
 # To classify the housing data into homeowners, renters, cost-bu
@@ -149,6 +148,7 @@ if ("census_microdata081122_processed.feather" %in% list.files("raw_data")) {
     mutate(
       OWNCOST  = replace(OWNCOST, OWNCOST == 99999, NA),
       HHINCOME = replace(HHINCOME, HHINCOME == 99999, NA),
+      INCTOT = replace(INCTOT, INCTOT == 9999999, NA),
       OWNERSHP = replace(OWNERSHP, OWNERSHP == 0, NA),
       RENTGRS  = replace(RENTGRS, RENTGRS == 0 & OWNERSHP == 1, NA),
   
@@ -208,9 +208,11 @@ if ("census_microdata081122_processed.feather" %in% list.files("raw_data")) {
         
         num_children = sum(age < 18),
       
-        kd_pres = if_else(num_children > 0, "kids", "no_kids"),
+        any_kd_pres = if_else(num_children > 0, "kids", "no_kids"),
       
-        own_kd_pres = if_else(NCHILD > 0, "kids", "no_kids")) %>%
+        own_kd_pres = if_else(NCHILD > 0, "kids", "no_kids"),
+      
+        kd_pres = any_kd_pres == "kids" | own_kd_pres == "kids") %>%
     ungroup()
   
   
@@ -362,11 +364,53 @@ The fact that a household falls under the single-earner category reflects their 
 * Some graphs include a *rolling mean* that averages multiple years of data together to reduce noise. This is noted on those graphs.
 * GLP strives to use inclusive language and analyze data for traditionally underrepresented groups whenever possible. However, current data has its limitations. The terminology we use to describe race, sex, gender, and other identities mirrors the way questions were asked in the U.S. Census Bureau's American Community Survey. Additionally, the survey does not provide us with enough information to create data on many populations in Louisville. When we break data down by race, we include data for white non-Hispanic residents, Black non-Hispanic residents, and Hispanic residents. For the original questionnaire text, see the Appendix section of this report.
 
+# Households and Housing
+
+We'll look at how homeownership and affordability shake out among Louisville residents. We'll represent the 315,000 households as 100 dots.
+
+<h4>Louisville population is <span style="color:#F58021">51% female</span> and <span style="color:#0E4A99">49% male</span>.</h4>
+
+![](demographic images/demographics-01.png){width=75%}
+
+<h4>Of the 315,000 households in Louisville, <span style="color:#00A9B7">54%</span> receive income from multiple residents.</h4>
+
+![](demographic images/demographics_02 - Multiple earners.png){width=75%}
+
+<h4>We’ll call these households <span style="color:#800055">multiple-earner</span> households.</h4>
+
+![](demographic images/demographics_03 - Multiple earners.png){width=75%}
+
+<h4>(We'll also rotate things to make it easier to follow.)</h4>
+
+![](demographic images/demographics_04 - Rearrange.png){width=75%}
+
+<h4></h4>
+
+<h4><span style="color:#F58021">71% of multiple-earner households</span> are homeowners.
+Only <span style="color:#0E4A99">49% of single female-headed households</span> are homeowners, and 
+<span style="color:#800055">55% of single male-headed households</span> are homeowners.</h4>
+
+![](demographic images/demographics_05 - Homeownership.png){width=75%}
+
+<h4><span style="color:#F58021">14% of multiple-earner households</span> are cost-burdened,
+<span style="color:#0E4A99">46% of single female-headed households</span> are cost-burdened, and 
+<span style="color:#800055">31% of single male headed households</span> are cost-burdened.</h4>
+
+![](demographic images/demographics_06 - Cost burden.png){width=75%}
+
+<h4><span style="color:#F58021">49% of multiple-earner households</span> have children in the household,
+<span style="color:#0E4A99">23% of single female-headed households</span> have children in the household, and 
+<span style="color:#800055">13% of single male headed households</span> have children in the household.</h4>
+
+![](demographic images/demographics_07 - kids.png){width=75%}
+
+Through the rest of this report, we'll look at how these things combine to affect homeownership and housing affordability.
+
 ```{r Harrison, out.width = "100%", out.extra='style="border: 0px" allowfullscreen=""', include=FALSE}
 
 waffle_data <- survey_by_demog(lville_2019, "hh_type", other_grouping_vars = c("kd_pres", "earner_type"))
 
-gender <- waffle_data %>%
+waf_gender <- waffle_data %>%
   filter(
     race == "total",
     sex != "total",
@@ -375,7 +419,7 @@ gender <- waffle_data %>%
   summarize(n = sum(cb_homeowner), .groups = "drop") %>%
   mutate(pct = n / sum(n) * 100)
 
-earn_type <- waffle_data %>%
+waf_earn_type <- waffle_data %>%
   filter(
     race == "total",
     sex != "total",
@@ -384,7 +428,7 @@ earn_type <- waffle_data %>%
   summarize(n = sum(cb_homeowner), .groups = "drop") %>%
   mutate(pct = n / sum(n) * 100)
 
-earn_type <- waffle_data %>%
+waf_homeowner <- waffle_data %>%
   filter(
     race == "total",
     sex != "total",
@@ -393,9 +437,11 @@ earn_type <- waffle_data %>%
   summarize(n = sum(cb_homeowner + noncb_homeowner),
             total = sum(cb_homeowner + noncb_homeowner + cb_renter + noncb_renter),
             .groups = "drop") %>%
-  mutate(pct = n / sum(total) * 100)
+  mutate(
+    pct1 = n / sum(total) * 100,
+    pct2 = n / total * 100)
 
-earn_type <- waffle_data %>%
+waf_cost_burden <- waffle_data %>%
   filter(
     race == "total",
     sex != "total",
@@ -404,7 +450,18 @@ earn_type <- waffle_data %>%
   summarize(n = sum(cb_homeowner + cb_renter),
             total = sum(cb_homeowner + noncb_homeowner + cb_renter + noncb_renter),
             .groups = "drop") %>%
-  mutate(pct = n / sum(total) * 100)
+  mutate(pct1 = n / sum(total) * 100,
+         pct2 = n / total)
+
+waf_kids <- waffle_data %>%
+  filter(
+    race == "total",
+    sex != "total",
+    var_type == "population") %>%
+  group_by(sex, earner_type, kd_pres)  %>%
+  summarize(n = sum(cb_homeowner),
+            .groups = "drop") %>%
+  mutate(pct1 = n / sum(n) * 100)
   
 demog_data <- data.frame(
   row_num = rep(1:10, each = 10),
@@ -1201,7 +1258,8 @@ H_earntype_kids %<>%
     var_type == 'percent',
     sex == "female") %>%
   pivot_wider(names_from = 'kd_pres', values_from = 'homeownership') %>%
-  select(-sex)
+  select(-sex) %>%
+  rename(kids = `TRUE`, no_kids = `FALSE`)
 
 
 trend(H_earntype_kids, 
