@@ -332,42 +332,37 @@ save(H_gender, H_earntype, H_earntype_kids, CB_earntype,
 load("clean_svybydemog_data.RData")
 ```
 
-Gender equity in Louisville is an unfortunately unequal reality. Women are worse off in key standard of living areas such as household income and homeownership. Additionally, these issues are exasperated for women from a one-income home, women with children, and minority women. Disproportionate cost of living burdens and care-taking responsibilities can perpetuate a viscous cycle of inequity. Understanding the true size of the 'equity gap' can help inform policy decisions to stop this cycle from continuing.  
+# Introduction
 
-Key definitions:
+Access to safe and affordable housing is foundational for families' well-being. In this report, we examine the intersection between gender and housing. We find that while in Louisville, women and men have similar rates of homeowership, women are far more likely to live in housing that is not affordable to them. This is exacerbated for women from a single-income home, women with children, and women of color. Disproportionate cost of living burdens and care-taking responsibilities can perpetuate a viscous cycle of inequity. Understanding the true size of the 'equity gap' can help inform policy decisions to stop this cycle from continuing.  
 
-* **Cost-burdened household** - when a household has to pay more than *30%* of their income toward housing costs (including rent, utilities, mortgage payments, and any other homeownership costs.)
+### Key Definitions
+
+* **Cost-burdened household** - when a household pays more than *30%* of their income toward housing costs (including rent, utilities, mortgage payments, and any other homeownership costs). This is a standard cutoff for "affordability."
 * **Severely cost-burdened household** - when a household has to pay more than *50%* of their income toward housing costs.
-* **Single-income household** and **Multiple-earner household** - A single-income household has only one wage earner, while a multiple-earner household includes multiple earners. Throughout the data, we usually group households into three groups:
+* **Single-earner household** and **Multiple-earner household** - A single-income household has only one wage earner, while a multiple-earner household includes multiple earners. Throughout the data, we usually group households into three groups:
   + Multiple-earner households
   + Single-earner, female-headed households
   + Single-earner, male-headed households
+* **Households with Children** include any households with children under age 18. The Census Bureau collects information on whether household members are related, but this data does not encompass all living situations, particularly people raising children who are not legally related to them. We assume that adults are responsible for the care of any children living in their household. While this is likely complicated in large households with multiple adults and families, all of our analysis that includes children focuses on households with a single income-earner, so we are confident that this assumption reflects their reality in most cases.
+  
+The fact that a household falls under the single-earner category reflects their financial situation rather than the personal relationships of the people within the household. Single-earner households might include someone living on their own or living with children, or they might have a spouse or partner who is not working or who lives outside the household.
 
+### Key Takeaways
 
-Key Takeaways:
+1. Women and men in single-income households have very **similar rates of homeownership** in Louisville. 
+2. On average, women in single-income households make **significantly less money** than men from single-income households. As a result, almost half of Louisville women in single-income households are **cost-burdened**, putting them at increased risk of eviction or foreclosure.
+3. Around **39% of women in single-income households earn a living wage** that covers their basic expenses. Single-earner women without children are most likely to earn a living wage. Only around 1 in 4 single-income women with one child, 1 in 20 single-income women with two children, and 1 in 50  single-income women with three children earn a living wage.
+4. Compared to peer cities, Louisville has **relatively high homeownership for women in single-income households with no children**. However, **for single-income women with children, we are second to last**. Additionally, homeownership for women from a one-income household with children has been steadily decreasing since 2016. 
+5. Homeownership for single-income women is **much lower** for women of color.
 
-1. Women and men in single-income households have very similar rates of homeownership in Louisville. 
-2. On average, women in single-income households make significantly less money on average than men from single-income households. As a result, almost half of Louisville women in single-income households are cost-burdened, putting them at increased risk of eviction or foreclosure.
-3. Around 43% of women in single-income households earn a living wage that covers their basic expenses (around \$30,000.) However, that number is only around 10% for single-income women with a child, only around 5% for single-income women with two children, and near 0% for single-income women with three or more children.
-4. Compared to peer cities, Louisville has relatively high homeownership for women in single-income households with no children. However, for single-income women with children, we are second to last. Additionally, homeownership for women from a one-income household with children has been steadily decreasing since 2016. 
-5. Homeownership for single-income women is much lower for women of color.
+### Other Notes
 
+* This data comes from the *U.S. Census Bureau American Community Survey*, or *ACS* for short. The ACS is the nation's largest annual household survey. Because the data comes from a survey, small changes from year to year might reflect noise in the data due to the random sampling of households from one year to the next. The data becomes even noisier when we look at small groups for whom there were fewer responses (e.g. Black women with children). Small changes from year-to-year should be interpreted with caution. 
+* Some graphs include a *rolling mean* that averages multiple years of data together to reduce noise. This is noted on those graphs.
+* GLP strives to use inclusive language and analyze data for traditionally underrepresented groups whenever possible. However, current data has its limitations. The terminology we use to describe race, sex, gender, and other identities mirrors the way questions were asked in the U.S. Census Bureau's American Community Survey. Additionally, the survey does not provide us with enough information to create data on many populations in Louisville. When we break data down by race, we include data for white non-Hispanic residents, Black non-Hispanic residents, and Hispanic residents. For the original questionnaire text, see the Appendix section of this report.
 
-Rolling mean explanation
-
-Race categories explanation
-
-GLP strives to use inclusive language and analyze data for traditionally underrepresented groups whenever possible. However, current data has its limitations. The terminology we use to describe race, sex, gender, and other identities mirrors the way questions were asked in the U.S. Census Bureau's American Community Survey. Additionally, the survey does not provide us with enough information to create data on many populations in Louisville. When we break data down by race, we include data for white non-Hispanic residents, Black non-Hispanic residents, and Hispanic residents.
-
-
-
-
-Data are often scarce for Hispanic and Latinx populations, as well for the LGBTQ+
-population. National data we collect–for measures such as overdoses and certificates–are often unavailable at the zip code or neighborhood levels. 
-
-
-# Waffle Chart
-```{r Harrison, out.width = "100%", out.extra='style="border: 0px" allowfullscreen=""'}
+```{r Harrison, out.width = "100%", out.extra='style="border: 0px" allowfullscreen=""', include=FALSE}
 
 waffle_data <- survey_by_demog(lville_2019, "hh_type", other_grouping_vars = c("kd_pres", "earner_type"))
 
@@ -438,7 +433,7 @@ prop.table(table(t_df$earner_type_d))
 ```
 
 
-# Income {.tabset}
+# Income {.tabset .tabset-pills .tabset-fade}
 
 ```{r, include = FALSE}
 #Finding income ranges
@@ -448,9 +443,7 @@ cut_95 = quantile(lville_2019$HHINCOME, probs = 0.95)
 
 ```
 
-This section will display income levels for single earner males, females, and multiple demographic and household makeups for single females earners. 
-
-Disparity between single earner male and female wages is significant in Louisville. In 2019, 50% of males in Louisville made at least \$45,000 while this values is only \$30,000 for females. This disparity increases as wages rise, wealthiest 10% of males earn at least \$120,000 while females in the same income bracket earn at least \$71,000. 
+Income disparities by gender are significant in Louisville. In 2019, 50% of males in Louisville made at least \$45,000 while this values is only \$30,000 for females. This disparity increases as wages rise, wealthiest 10% of males earn at least \$120,000 while females in the same income bracket earn at least \$71,000. 
 ```{r 2019 Louisville Men and Women Income Compared, eval=FALSE}
 
 #fix formatting
@@ -492,7 +485,11 @@ gt(single_earner_pctiles) %>%
 ```
 
 
-## by Gender
+## Gender
+
+The chart below shows the number of single-earners than fall into each income bucket by gender. For example, the leftmost bar shows that around 4,000 single-earner, female-headed households earned between \$0 and \$10,000 in 2019, while the bottom chart shows that around 2,500 single-earner, male-headed households earned between \$0 and \$10,000 in 2019.
+
+Single-earner, female-headed households make significantly less than their male counterparts. While the median household income for single female-headed households is \$30,000, the median household income for single male-headed households is \$45,000.
 
 ```{r}
 p <- lville_2019 %>% 
@@ -503,7 +500,7 @@ p <- lville_2019 %>%
 p <- p + glp_graph_theme
 
 p <- p + labs(
-  title = "Single Earner Income by Gender",
+  title = "Income for Single-Earner Households",
 ) +
   
   ylab(" ") +
@@ -580,10 +577,9 @@ scale_x_continuous(
 p_percent
 ```
 
-## by Age
+## Age
 
--this seems wrong...shouldn't the groups be flippled logically?...also there arent any multiple earners if you examine the dataframe
-Single and multiple income households follow a similar pattern of earnings with highest earnings seen between 40 and 49 years of age. 
+As you would expect, households with multiple incomes have higher incomes than households with single incomes. However, the data also show a large disparity between female and male earnings over time. This gap is largest for working-age residents and less significant for those over age 60.
 
 ```{r Median Income for Earning Group by Age}
 
@@ -593,32 +589,32 @@ I_median_earn_age <- lville_2019 %>%
 
 I_median_earn_age_plot <- ggplot(I_median_earn_age, 
        aes(x=age_group, y=Med, fill = earner_type_d)) + 
-  geom_bar(stat="identity", position='dodge') 
+  geom_bar(stat="identity", position='dodge', alpha = 0.8) 
 
 I_median_earn_age_plot <- I_median_earn_age_plot + glp_graph_theme
 
 I_median_earn_age_plot <- I_median_earn_age_plot +
   labs(
-  title = "Median Earnings by Age Group",
+  title = "Household Income by Earner Type and Age",
 ) + 
   ylab("Household Income") +
   xlab("Age Group") +
   
-  scale_y_continuous(labels = scales::dollar) +   
+  scale_y_continuous(labels = scales::dollar_format(suffix = "k", scale = 0.001)) +   
   scale_fill_manual(
-    values = c("#0E4A99", "#F58021"), 
-    labels = c("Multiple Earner", "Single Female Earner"))
+    values = c("#0E4A99", "#F58021", "#00A9B7"), 
+    labels = c("Multiple Earner", "Single Female Earner", "Single Male Earner"))
 
   
 I_median_earn_age_plot
 
 ```
 
-## by Race {.tabset}
+## Race {.tabset .tabset-pills .tabset-fade}
 
-When examining single earner females broken down by race it becomes apparent that for non-white females it is significantly less likely to see wages about \$50,000. 
+Incomes for female single-earner households are much higher for white-headed households than households headed by women of another race. Income for Black- and Hispanic-headed households is very concentrated in the \$10,000 to \$30,000 range.
 
-Only wages under \$150,000 are displayed because of the small number of instances any female single earners make over $150,000.
+Only wages under \$200,000 are displayed because of the small number of residensts earning over \$200,000.
 
 ```{r, include=FALSE}
 
@@ -633,7 +629,8 @@ func_income_by_race <- function(race_group) {
     sex == 'female',
     race == race_group,
     earner_type == 'single_earner',
-    HHINCOME <= cut_95) 
+    HHINCOME <= cut_95,
+    HHINCOME >= 0) 
   
    q <- q %>%
    ggplot( aes(x=HHINCOME, 
@@ -648,12 +645,12 @@ q <- q + glp_graph_theme
 
 q <- q + 
   labs(
-  title = "Black Female Single Earner Income",
+  title = "Black Female Single-Earner Income",
 ) + 
   ylab(" ") +
   xlab("Household Income")+
   
-  guides(color = FALSE)
+  guides(color = FALSE, fill = FALSE)
 
 q <- q + 
   
@@ -664,10 +661,12 @@ q <- q +
   )  + 
   
 scale_x_continuous(
-  breaks = c(50000, 100000, 150000),
-  label = c("$50k", "$100k", "$150k")
+  breaks = c(0, 50000, 100000, 150000, 200000),
+  label = c("$0", "$50k", "$100k", "$150k", "$200k"),
+  limits = c(-5000, 200000)
 ) +
-  scale_y_continuous(labels = scales::percent)
+  scale_y_continuous(labels = scales::percent,
+                     limits = c(0, 0.35))
 
     
   
@@ -675,62 +674,6 @@ scale_x_continuous(
   
 }
 ```
-
-```{r, eval=FALSE}
-
-## original faceted graph...has been removed
-sing_fem_inc_race<-census_microdata081122 %>% 
-  filter(
-    FIPS == "21111",
-    year %in% 2016:2019,
-    sex == 'female',
-    earner_type == 'single_earner',
-    HHINCOME <= cut_95) 
-  
-   sing_fem_inc_race_plt <- sing_fem_inc_race %>%
-   ggplot( aes(x=HHINCOME, 
-              y = (..count..)/sum(..count..),
-               fill=race, 
-               color = race, 
-               weight = HHWT)) +
-    geom_histogram(alpha=0.5, position = 'identity', binwidth = 10000) 
-
-
-sing_fem_inc_race_plt <- sing_fem_inc_race_plt + facet_wrap(~race, nrow = 2) 
-
-sing_fem_inc_race_plt <- sing_fem_inc_race_plt + glp_graph_theme
-
-sing_fem_inc_race_plt <- sing_fem_inc_race_plt + 
-  labs(
-  title = "Female Single Earner Income",
-) + 
-  ylab(" ") +
-  xlab("Household Income")
-  
-  # guides(color = FALSE)
-
-sing_fem_inc_race_plt <- sing_fem_inc_race_plt + 
-  
-  theme( 
-  #axis.ticks.x =  element_line(size = 50000),
-  strip.text = element_blank()
-  
-  )  + 
-
-scale_x_continuous(
-  breaks = c(50000, 100000, 150000),
-  label = c("$50k", "$100k", "$150k")
-) +
-  scale_y_continuous(labels = scales::percent)
-
-sing_fem_inc_race_plt <- sing_fem_inc_race_plt +
-  
-  scale_fill_manual(values = c("#0E4A99", "#F58021","#00A9B7", "#800055")) +
-  scale_color_manual(values = c("#0E4A99","#F58021","#00A9B7", "#800055")) 
-
-sing_fem_inc_race_plt
-```
-
 
 ### Black
 ```{r 2019 Louisville Single Female Income by Race}
@@ -781,9 +724,11 @@ other_female_earner <- other_female_earner +
 other_female_earner
 ```
 
-## Compared to a Living Wage {.tabset}
+## Compared to a Living Wage {.tabset .tabset-pills .tabset-fade}
 
-For single-adult households, a living wage is \$33k for a single adult, \$66k for an adult with one child, \$84k for an adult with two children, and $112k for one adult and three children.
+Data from the MIT living wage calculator show the amount of money required to meet a basic level of needs in mid-2021. For single-adult households in mid-2021, a living wage was \$33k for a single adult with no children, \$66k for an adult with one child, \$84k for an adult with two children, and $112k for one adult and three children.
+
+These graphs show incomes for female single-earner households broken down by the number of children in the household. The blue dotted line represents a living wage.
 
 ```{r}
 func_income_by_kids <- function(num_kids, living_wage) {
@@ -820,7 +765,8 @@ w <- w +
   ylab(" ") +
   xlab("Household Income")+
   
-  guides(color = FALSE)
+  guides(color = FALSE,
+         fill = FALSE)
 
 w <- w + 
   
@@ -832,9 +778,11 @@ w <- w +
   
 scale_x_continuous(
   breaks = c(50000, 100000, 150000),
-  label = c("$50k", "$100k", "$150k")
+  label = c("$50k", "$100k", "$150k"),
+  limits = c(0, 160000)
 ) +
-  scale_y_continuous(labels = scales::percent) 
+  scale_y_continuous(labels = scales::percent,
+                     limits = c(0, 0.4)) 
     
   
   return (w)
@@ -843,6 +791,8 @@ scale_x_continuous(
 ```
 
 ### No Child
+
+44% of single-earner, female-headed households with no children earned a living wage.
 
 ```{r}
 
@@ -853,18 +803,21 @@ scale_x_continuous(
 under_liv_wage_0 <- census_microdata081122 %>% 
   filter(
     FIPS == "21111",
-    year %in% 2016:2019,
+    year %in% 2019,
     sex == 'female',
     NCHILD == 0,
     earner_type == 'single_earner') %>%
-  group_by(HHINCOME < 33321.6) %>%
+  mutate(lw = HHINCOME < 33321.6) %>%
+  group_by(lw) %>%
   summarize(count = sum(HHWT)) #a little more than half are earning a living wage
 #do this for each graphof this type...add info above chunk
+
+under_liv_wage_0_result <- under_liv_wage_0$count[under_liv_wage_0$lw] / sum(under_liv_wage_0$count)
 
 no_kids_female_earner <- func_income_by_kids(0, 33321.6)
 no_kids_female_earner <- no_kids_female_earner + 
   labs(
-  title = "Female Single Earner Income, No Children",
+  title = "Female Single-Earner Income, No Children",
 ) + 
   scale_fill_discrete(labels = "No Children")
 
@@ -872,21 +825,27 @@ no_kids_female_earner
 ```
 
 ### 1 Child
+
+24% of single-earner, female-headed households with one child earned a living wage.
+
 ```{r}
 under_liv_wage_1 <- census_microdata081122 %>% 
   filter(
     FIPS == "21111",
-    year %in% 2016:2019,
+    year %in% 2019,
     sex == 'female',
     NCHILD == 1,
     earner_type == 'single_earner') %>%
-  group_by(HHINCOME < 66081.6) %>%
+  mutate(lw = HHINCOME < 66081.6) %>%
+  group_by(lw) %>%
   summarize(count = sum(HHWT))
+
+under_liv_wage_1_result <- under_liv_wage_1$count[under_liv_wage_1$lw] / sum(under_liv_wage_1$count)
 
 one_child <- func_income_by_kids(1, 66081.6)
 one_child <- one_child + 
   labs(
-  title = "Female Single Earner Income, One Child",
+  title = "Female Single-Earner Income, One Child",
 ) + 
   scale_fill_manual(values = "#800055", labels = "One Child" ) +
   scale_color_manual(values = "#800055") 
@@ -896,22 +855,28 @@ one_child
 
 
 ### 2 Children
+
+5% of single-earner, female-headed households with two children earned a living wage.
+
 ```{r}
 
 under_liv_wage_2 <- census_microdata081122 %>% 
   filter(
     FIPS == "21111",
-    year %in% 2016:2019,
+    year %in% 2019,
     sex == 'female',
     NCHILD == 2,
     earner_type == 'single_earner') %>%
-  group_by(HHINCOME < 83990.4) %>%
+  mutate(lw = HHINCOME < 83990.4) %>%
+  group_by(lw) %>%
   summarize(count = sum(HHWT))
+
+under_liv_wage_2_result <- under_liv_wage_2$count[under_liv_wage_2$lw] / sum(under_liv_wage_2$count)
 
 two_child <- func_income_by_kids(2, 83990.4)
 two_child <- two_child + 
   labs(
-  title = "Female Single Earner Income, Two Children",
+  title = "Female Single-Earner Income, Two Children",
 ) + 
   scale_fill_manual(values = "#356E39", labels = "Two Children") +
   scale_color_manual(values = "#356E39") 
@@ -921,21 +886,32 @@ two_child
 
 ### 3 Children
 
+2% of single-earner, female-headed households with three children earned a living wage.
+
 ```{r}
 under_liv_wage_3 <- census_microdata081122 %>% 
   filter(
     FIPS == "21111",
-    year %in% 2016:2019,
+    year %in% 2019,
     sex == 'female',
     NCHILD == 3,
     earner_type == 'single_earner') %>%
-  group_by(HHINCOME < 111529.6) %>%
+  mutate(lw = HHINCOME < 111529.6) %>%
+  group_by(lw) %>%
   summarize(count = sum(HHWT))
+
+under_liv_wage_3_result <- under_liv_wage_3$count[under_liv_wage_3$lw] / sum(under_liv_wage_3$count)
+
+under_liv_wage <- bind_rows(under_liv_wage_0, under_liv_wage_1) %>%
+  bind_rows(under_liv_wage_2) %>%
+  bind_rows(under_liv_wage_3)
+
+under_lw_all <- sum(under_liv_wage$count[under_liv_wage$lw]) / sum(under_liv_wage$count)
 
 three_child <- func_income_by_kids(3, 111529.6)
 three_child <- three_child + 
   labs(
-  title = "Female Single Earner Income With Three Children",
+  title = "Female Single-Earner Income, Three Children",
 ) + 
   scale_fill_manual(values = "#CFB94C", labels = "Three Children") +
   scale_color_manual(values = "#CFB94C") 
@@ -974,14 +950,16 @@ under_liv_wage_3_age <- age_liv_wage(3, 101452.61) #32.7
 
 ```
 
-# Cost Burden {.tabset}
+# Cost Burden {.tabset .tabset-pills .tabset-fade}
 
-Add cost burden definition reminder?
+Cost-burden is the percent of income that a household pays towards housing costs, including rent, utilities, mortgage payments, and other  homeownership expenses like property taxes. Housing is commonly considered "affordable" if it costs less than 30% of the households income. This measure is limited because low-income households might pay a small share of their income towards housing and still not be able to meet their basic needs, while a high-income household might be considered cost-burdened but live comfortably. However, cost-burden has been shown to be a stong predictor of risk of foreclosure and eviction, food insecurity, and other financial issues.
 
+## Income
 
-### by Income
+This graph shows the percent of female single-earner households that are cost burdened by income group. As you would expect, fewer households are cost-burdened as their income increases. 
 
-Visualizing cost burden status by household income provides a clear indication that very few single female earners are cost burdened when earning at least \$70,000. For reference, %50 of single female earners in Louisville make less than \$30,000.
+Virtually no  single female earners are cost-burdened when earning at least \$70,000. However, most female single-earner households in Louisville make less than \$30,000 per year, and most households in those income ranges are cost-burdened.
+
 ```{r}
 
 
@@ -1018,8 +996,8 @@ cost_burden_sf_plot <- ggplot(temp_df,
        aes(x = inc_bins,
            y = percent,
            group = 1)) +
-  geom_line(linetype = "dashed",  color="chartreuse4", size=3) +
-  geom_point(color="chartreuse4", size=8)
+  geom_line(linetype = "dashed",  color="#800055", size=2) +
+  geom_point(color="#800055", size=4)
 
 cost_burden_sf_plot <- cost_burden_sf_plot + glp_graph_theme
 
@@ -1042,9 +1020,10 @@ cost_burden_sf_plot <- cost_burden_sf_plot +
 cost_burden_sf_plot
 ```
 
-### by Age 
+## Age 
 
-While cost burden status does appear to decrease on average for single female earners as their age increases, there is significant room for improvement. Notice that a significant portion of individuals in their twenties face cost burden status and after single female earners reach their 60's cost burden status begins to increase again.  
+Single-earner female-headed households are most likely to be cost-burdened when the head of household is in their 20s, and the rate of cost-burden generally decreases as they grow older and make more money, on average. However, cost-burden is still nearly 50% among all age groups.
+
 ```{r  Cost Burdened Stage by Age/Race}
 cost_burden_age_sf %<>% drop_na(cost_burden) #this will need to be run once and then left alone if tweaking graphs
 
@@ -1064,8 +1043,7 @@ temp_df1 <- cost_burden_age_sf %>%
 temp_df1 %<>%  filter(!is.na(age_group))
 
 cost_burden_age_sf_facet_plt <- ggplot(temp_df1,
-       aes(x=age_group, y=HHWT , fill=cost_burden),
-        color="#00A9B7") +
+       aes(x=age_group, y=HHWT , fill=cost_burden)) +
 geom_bar(stat="identity", position='fill')
   
 #facet_wrap(~earner_type_d)
@@ -1074,17 +1052,14 @@ cost_burden_age_sf_facet_plt <- cost_burden_age_sf_facet_plt + glp_graph_theme
 
 cost_burden_age_sf_facet_plt <- cost_burden_age_sf_facet_plt + 
     theme(
-    legend.position = "right",
-    
-    strip.text = element_text(size = 40)
-    ) +
+    legend.position = "top") +
   labs(
   title = "Cost Burdened Status by Age"
 ) + 
   ylab(" ") +
   xlab(" ") +
-  scale_fill_discrete(labels = c("Non Cost Burdened", "Cost Burdened")) + 
-  scale_x_discrete(guide = guide_axis(n.dodge=2)) +
+  scale_fill_manual(labels = c("Non Cost Burdened", "Cost Burdened"), values =  c("#0E4A99", "#F58021")) + 
+  #scale_x_discrete(guide = guide_axis(n.dodge=2)) +
 
   scale_y_continuous(labels = scales::percent)
 
@@ -1098,7 +1073,8 @@ cost_burden_age_sf_facet_plt
 
 ## Over Time
 
-While Louisville does fair better than its peer cities with less cost burdened single female earners, there is significant room for improvement in terms of closing the gap between single female and male earners. 
+Comparing cost-burdened status over time and against peer cities shows that Louisville tends to have lower rates of cost-burden than peer cities, however there are entrenched disparities in Louisville and across our peers.
+
 ```{r Cost-burdened by earner type Trend }
 
 CB_earntype %<>%
@@ -1135,12 +1111,13 @@ ungroup()%>%
 ```
 
 
-# Homeownership {.tabset}
-Overall, 32% of homeowners in Louisville are female with and average age of 64. - ask harrison about this
+# Homeownership {.tabset .tabset-pills .tabset-fade}
 
-## by demographic
+Homeownership is an important component of financial independence and stability.
 
-```{r, eval=FALSE}
+## Over Time
+
+```{r, eval=FALSE, include=FALSE}
 ### Female Homeowner Proportions
 
 w_howner <- lville_2019 %>%
@@ -1149,13 +1126,13 @@ w_howner <- lville_2019 %>%
 prop.table(table(w_howner$homeownership)) 
 ```
 
-```{r, eval = FALSE}
+```{r, eval=FALSE, include=FALSE}
 #all homeownership
 
 prop.table(table(lville_2019$homeownership, lville_2019$sex)) 
 ```
 
-```{r, eval = FALSE}
+```{r, eval=FALSE, include=FALSE}
 ### Age of Female Homeowners
 
 female_age_howner <- lville_2019 %>%
@@ -1174,7 +1151,7 @@ female_age_howner #avg age for female homeowner is 64.06362
 ```
 
 
-```{r, eval = FALSE}
+```{r, eval=FALSE, include=FALSE}
 
 ### Female Homeowners with & withut Kids Proportions
 
@@ -1187,7 +1164,8 @@ prop.table(table(kid_howner$kd_pres)) #0.3379953 women homeowners have kids
 ```
 
 
-It is clear that having multiple household incomes significantly increases the ability to own a home. On average, single female home ownership has declined in Louisville since 2007. 
+Households with multiple earners are significantly more likely to own a home than those with a single income-earner. The rates of homeownership among single-earner male-headed households and single-earner female-headed households are fairly similar, though males have slightly higher rates of homeownership. Homeownership for female-headed households has remained fairly steady since 2010, while homeownership for male-headed and multiple-earner households has declined.
+
 ```{r Trend in Homeownership by Gender}
 
 #also compares earner types
@@ -1208,11 +1186,14 @@ trend(temp_df,
 
 ```
 
-## by presence of children {.tabset}
+## Presence of children {.tabset .tabset-pills .tabset-fade}
 
-### trend
+Homeownership rates are drastically lower for female-headed households with children than for women without children. While women without children in Louisville consistently have much higher rates of homeownership than in peer cities, women with children tend to have lower rates of homeownership in Louisville than in peer cities.
 
-For women in Louisville with children home ownership rates are drastically lower than rates for women without children. Additionally, the female home onwership rate with children has steadily decreased since 2014. 
+As the ranking graphs show, Louisville ranks 2nd in homeownership among women without children, but 16th among women with children. 
+
+### Trend
+
 ```{r Trend in Homeownership by for Single Females with vs. without Kids}
 
 H_earntype_kids %<>%
@@ -1233,9 +1214,11 @@ trend(H_earntype_kids,
       "Source: Greater Louisville Project
        Data from GLP analysis of ACS microdata from IPUMS-USA")
 
+write_csv(pull_peers(H_earntype_kids, add_info = TRUE), "earntype_slopegraph.csv")
+
 ```
 
-### Without children
+### Ranking without children
 
 ```{r Ranking Single Female Homeownership}
 ranking(H_earntype_kids, 
@@ -1253,19 +1236,20 @@ ranking(H_earntype_kids,
 ```{r Ranking Single Female with Kids Homeownership}
 ranking(H_earntype_kids,
         'kids',
-        plot_title = "Single Earner Female Homeownership with Children",
-        #title_scale = 0.8,
+        plot_title = "Single-Earner Female Homeownership with Children",
+        title_scale = 0.8,
         caption_text = 
       "Source: Greater Louisville Project
        Data from GLP analysis of ACS microdata from IPUMS-USA")
 
 ```
 
-## by Race
+## Race
 
-There is a significant disparity in home ownership rates for non-white female single earners. Black single female earners have seen a steady decrease since 2007. 
+There is a significant disparity in homeownership rates by race. While most white female-headed households are homeowners, only around 1 in 4 Black female-headed households are homeowners.
+
 ```{r Trend in Single Female Homeownership by Race}
-trend(filter(H_earntype, earner_type_d == "single_fem_earner"), 
+trend(filter(H_earntype, earner_type_d == "single_fem_earner", race != "hispanic"), 
       homeownership, 
       rollmean = 5,
       pctiles = F,
@@ -1278,20 +1262,24 @@ trend(filter(H_earntype, earner_type_d == "single_fem_earner"),
 
 ```
 
-## by Race and Children {.tabset}
+## Race and Children {.tabset .tabset-pills .tabset-fade}
 
-A similar trend to the overall average is scene for each demographic when comparing home ownership rates for females with and without children - rates are lower for females with children. 
+Data broken down by both race and presence of children is fairly noisy due to the small sample size for many groups. 
+
+However, we can see that similar disparities exist, and are even more severe in households with children.
+
 ### With Children
 
 ```{r Trend in Single Female Homeownership by Race with and without kids}
 
-trend(H_earntype_kids, 
+trend(filter(H_earntype_kids, race != "hispanic"), 
       kids, 
       rollmean = 5,
       pctiles = F,
       plot_title = "Single Female Homeownership by Year with Children", 
       cat = 'race', 
       y_title = 'Percent',
+      ylimits = c(0, 70),
       caption_text = 
       "Source Greater Louisville Project
        Data from GLP analysis of ACS microdata from IPUMS-USA")
@@ -1301,13 +1289,14 @@ trend(H_earntype_kids,
 ### Without Children
 
 ```{r}
-trend(H_earntype_kids, 
+trend(filter(H_earntype_kids, race != "hispanic"), 
       no_kids, 
       rollmean = 5,
       pctiles = F,
       plot_title = "Single Female Homeownership by Year without Children", 
       cat = 'race', 
       y_title = 'Percent',
+      ylimits = c(0, 70),
       caption_text = 
       "Source Greater Louisville Project
        Data from GLP analysis of ACS microdata from IPUMS-USA")
@@ -1353,17 +1342,15 @@ val
 
 
 
-# Education
+# Education {.tabset .tabset-pills .tabset-fade}
 
-## Education Level {.tabset}
+## Gender
 
-### By Gender
-
-Compared to single male earners, single female earners see a smaller percentage of individuals with High School Degree but larger percentages of individuals with Bachelor or Graduate degrees.  
+Educational attainment among single-earner headed households is fairly similar for males and females.
 
 ```{r}
 E_singM_singF <- census_microdata081122_person %>% 
-  filter(year %in% 2017:2019, 
+  filter(year %in% 2019, 
          earner_type == 'single_earner') %>%
   group_by(sex, educ) %>%
   summarize(n=sum(PERWT, na.rm = TRUE)) %>%
@@ -1379,7 +1366,8 @@ E_singM_singF_plot <- ggplot(E_singM_singF,
        aes(x=sex, 
            y=rate, 
            fill = educ)) + 
-  geom_bar(stat="identity", position = "fill") 
+  geom_bar(stat="identity", position = "fill") +
+  geom_text(aes(y = rate, label = percent(rate, scale = 1, accuracy = 0.1)), position = position_fill(vjust = 0.5), size = 24)
 
 
 #E_singM_singF_plot <- E_singM_singF_plot + facet_wrap(~kd_pres) 
@@ -1389,15 +1377,20 @@ E_singM_singF_plot <- E_singM_singF_plot + glp_graph_theme
 E_singM_singF_plot <- E_singM_singF_plot + 
   
   theme(
-    legend.position = "right"
-    ) +
+    legend.position = "right",
+    plot.subtitle = element_text(size = 48, hjust = 0.5)) +
 
   labs(
-  title = "Single Earner Education Levels by Gender",
-) + 
-  scale_fill_discrete(
-    labels = c("Graduate","Bachelor", "Associate", "Some College",  "High School", "No High School")) + 
+    title = "Education by Gender",
+    subtitle = "Data include single-earner households") + 
+
+  scale_fill_manual(name = "",
+                  values = c("#0E4A99", "#F58021", "#00A9B7", "#800055", "#356E39", "#CFB94C"),
+                  labels = c("Graduate","Bachelor", "Associate", "Some College",  "High School", "No High School")) +
+  
   scale_x_discrete (labels = c("female" = "Female", "male" = "Male")) +
+  ylab("") +
+  xlab("") +
   
   scale_y_continuous(labels = scales::percent)
 
@@ -1405,57 +1398,71 @@ E_singM_singF_plot
 ```
 
 
-### By presence of Children
+## Presence of Children
 
---because they are so similar can we make this just for females? 
+If we break things down by gender *and the presence of children*, we see that heads of households with children have more education, on average, than those without children. Among males and females with and without children, the most-educated group is females with children.
+
+
 ```{r}
-
-
 E_singM_singF <- census_microdata081122_person %>% 
-  filter(year %in% 2017:2019, 
+  filter(year %in% 2019, 
          earner_type == 'single_earner') %>%
   group_by(sex, educ, kd_pres) %>%
   summarize(n=sum(PERWT, na.rm = TRUE)) %>%
+  group_by(sex, kd_pres) %>%
   mutate(
-    total = sum(n),
-    rate = n/sum(n)*100,
+    rate = n/sum(n),
     educ = factor(educ, 
                   levels = rev(c("no_hs", "hs", "some_col", "assoc", "bach","grad")), 
-                  ordered = TRUE))
+                  ordered = TRUE),
+    kd_pres = factor(kd_pres, levels = c("kids", "no_kids"), labels = c("With Children", "Without Children"))) %>%
+  ungroup()
 
 
 E_singM_singF_plot <- ggplot(E_singM_singF, 
        aes(x=sex, 
            y=rate, 
            fill = educ)) + 
-  geom_bar(stat="identity", position = "fill") 
+  geom_bar(stat="identity", position = "fill")
 
 
-E_singM_singF_plot <- E_singM_singF_plot + facet_wrap(~kd_pres) 
+E_singM_singF_plot <- E_singM_singF_plot + 
+  facet_wrap(~kd_pres) +
+  geom_text(aes(y = rate, label = percent(rate, accuracy = 0.1)), position = position_fill(vjust = 0.5), size = 24)
   
 E_singM_singF_plot <- E_singM_singF_plot + glp_graph_theme
 
 E_singM_singF_plot <- E_singM_singF_plot + 
   
   theme(
-    legend.position = "right"
+    legend.position = "right",
+    strip.text = element_text(size = 40),
+    plot.subtitle = element_text(size = 48, hjust = 0.5)
     ) +
 
   labs(
-  title = "Single Earner Education Levels by Gender and Children",
-) + 
+    title = "Education by Gender and Presence of Children",
+    subtitle = "Data include single-earner households") + 
   ylab(" ") +
   xlab(" ") +
-  scale_fill_discrete(
-    labels = c("Graduate","Bachelor", "Associate", "Some College",  "High School", "No High School")) + 
+  scale_fill_manual(name = "",
+                  values = c("#0E4A99", "#F58021", "#00A9B7", "#800055", "#356E39", "#CFB94C"),
+                  labels = c("Graduate","Bachelor", "Associate", "Some College",  "High School", "No High School")) + 
   scale_x_discrete (labels = c("female" = "Female", "male" = "Male")) +
   
-  scale_y_continuous(labels = scales::percent)
+  scale_y_continuous(labels = scales::percent) +
+  guides(fill = guide_legend(label.position = "right"))
 
 E_singM_singF_plot
 ```
 
-### by race
+## Race
+
+Among the heads of female, single-earner households, white-headed households tend to have the highest levels of education.
+
+This chart also reflects the broad data underlying the "other" category in our data. Women of some other race than white, Black, anc Hispanic have very high rates of postsecondary attainment as well as the highest rate of those without a high school degree.
+
+
 ```{r, pie chart}
 
 E_singF_race <- lville_2019 %>% 
@@ -1469,32 +1476,38 @@ E_singF_race <- lville_2019 %>%
     rate = n/sum(n)*100,
     educ = factor(educ, 
                   levels = rev(c("no_hs", "hs", "some_col", "assoc", "bach","grad")), 
-                  ordered = TRUE))
+                  ordered = TRUE),
+    race = factor(race, 
+                  levels = c("white", "black", "hispanic", "other"), 
+                  labels = c("White", "Black", "Hispanic", "Other")))
 
 ggplot(E_singF_race, aes(x = "", y = rate, fill = educ)) +
   geom_bar(stat="identity", width=2, color="white") +
-  geom_text(aes(label = scales::percent(rate, scale = 1, accuracy = 0.1)),
+  geom_text(aes(label = scales::percent(rate, scale = 1, accuracy = 0.1), x = 1.5),
             position = position_stack(vjust = 0.5),
             size = 10,
             color = "white") +
+  
   coord_polar("y", start=0) +
   
-    glp_graph_theme + 
+  glp_graph_theme + 
   
   scale_fill_manual(name = "",
                     values = c("#0E4A99", "#F58021", "#00A9B7", "#800055", "#356E39", "#CFB94C"),
                     labels = c("Graduate","Bachelor", "Associate", "Some College",  "High School", "No High School")) +
   
   labs(
-    title = "") + 
+    title = "Education by Race",
+    subtitle = "Data include female single-earner households") + 
   
-    theme(
-  axis.title.x=element_blank(),
-  axis.title.y=element_blank(),
-  axis.text = element_blank()
-  #strip.text = element_blank()
-
-  )  +
+  theme(
+    axis.title.x=element_blank(),
+    axis.title.y=element_blank(),
+    axis.text = element_blank(),
+    strip.text = element_text(size = 40),
+    panel.grid  = element_blank(),
+    plot.subtitle = element_text(size = 48, hjust = 0.5),
+    legend.position = "right")  +
 
   facet_wrap(~race) 
 
@@ -1647,9 +1660,11 @@ earner_trend_plt <- earner_trend_plt +
 earner_trend_plt
 ```
 
-# Appendix {.tabset}
+# Appendix 
 
-## Gender
+## Census Questions {.tabset .tabset-pills .tabset-fade}
+
+### Gender
 
 >What is Person X's sex? Mark (X) ONE box.
 >
@@ -1657,7 +1672,7 @@ earner_trend_plt
 >
 >[ ] Female
 
-## Hispanic Descent
+### Hispanic Descent
 
 >Is Person X of Hispanic, Latino, or Spanish origin?
 >
@@ -1671,7 +1686,7 @@ earner_trend_plt
 >
 >[ ] Yes, another Hispanic, Latino, or Spanish origin -- Print origin, for example, Argentinean, Colombian, Dominican, Nicaraguan, Salvadoran, Spaniard, and so on. --> ______________________________________
 
-## Race
+### Race
 
 >What is Person X's race? Mark (X) one or more boxes.
 >
@@ -1705,18 +1720,4 @@ earner_trend_plt
 >
 >[ ] Some other race -- Print race. -->
 >____________________________________________________
-
-## Ranking with Children
-
-```{r Ranking Single Female with Kids Homeownership2}
-
-ranking(H_earntype_kids,
-        'kids',
-        plot_title = "Single Earner Female Homeownership with Children",
-        #title_scale = 0.8,
-        caption_text = 
-      "Source: Greater Louisville Project
-       Data from GLP analysis of ACS microdata from IPUMS-USA")
-
-```
 
