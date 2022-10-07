@@ -1247,7 +1247,7 @@ trend(temp_df,
 
 Homeownership rates are drastically lower for female-headed households with children than for women without children. While women without children in Louisville consistently have much higher rates of homeownership than in peer cities, women with children tend to have lower rates of homeownership in Louisville than in peer cities.
 
-As the ranking graphs show, Louisville ranks 2nd in homeownership among women without children, but 16th among women with children. 
+As the ranking graphs show, Louisville ranks 3rd in homeownership among women without children, but 12th among women with children. 
 
 ### Trend
 
@@ -1272,8 +1272,6 @@ trend(H_earntype_kids,
       "Source: Greater Louisville Project
        Data from GLP analysis of ACS microdata from IPUMS-USA")
 
-write_csv(pull_peers(H_earntype_kids, add_info = TRUE), "earntype_slopegraph.csv")
-
 ```
 
 ### Ranking without children
@@ -1290,6 +1288,8 @@ ranking(H_earntype_kids,
 
 
 ### Ranking with Children
+
+Homeownership among women with children seems to be abnormally high in Omaha in 2019, though the data seems to be an outlier caused by an odd year of survey data. The true homeownership rate for women with children in Omaha is likely closer to 30%.
 
 ```{r Ranking Single Female with Kids Homeownership}
 ranking(H_earntype_kids,
@@ -1425,7 +1425,9 @@ E_singM_singF_plot <- ggplot(E_singM_singF,
            y=rate, 
            fill = educ)) + 
   geom_bar(stat="identity", position = "fill") +
-  geom_text(aes(y = rate, label = percent(rate, scale = 1, accuracy = 0.1)), position = position_fill(vjust = 0.5), size = 24)
+  geom_text(aes(y = rate, label = percent(rate, scale = 1, accuracy = 0.1)), 
+            position = position_fill(vjust = 0.5), size = 24,
+            color = "white")
 
 
 #E_singM_singF_plot <- E_singM_singF_plot + facet_wrap(~kd_pres) 
@@ -1473,7 +1475,7 @@ E_singM_singF <- census_microdata081122_person %>%
     educ = factor(educ, 
                   levels = rev(c("no_hs", "hs", "some_col", "assoc", "bach","grad")), 
                   ordered = TRUE),
-    kd_pres = factor(kd_pres, levels = c("kids", "no_kids"), labels = c("With Children", "Without Children"))) %>%
+    kd_pres = factor(kd_pres, levels = c(TRUE, FALSE), labels = c("With Children", "Without Children"))) %>%
   ungroup()
 
 
@@ -1486,7 +1488,10 @@ E_singM_singF_plot <- ggplot(E_singM_singF,
 
 E_singM_singF_plot <- E_singM_singF_plot + 
   facet_wrap(~kd_pres) +
-  geom_text(aes(y = rate, label = percent(rate, accuracy = 0.1)), position = position_fill(vjust = 0.5), size = 24)
+  geom_text(aes(y = rate, label = percent(rate, accuracy = 0.1)), 
+            position = position_fill(vjust = 0.5), 
+            size = 24,
+            color = "white")
   
 E_singM_singF_plot <- E_singM_singF_plot + glp_graph_theme
 
