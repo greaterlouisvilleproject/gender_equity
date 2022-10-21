@@ -360,18 +360,30 @@ CB_earntype %<>%
 
 rm(CB_earntype_race)
 
-gender_earnings_labels <- data.frame (ind_code  = c("11","21","22","23","31-33","42","44-45","48-49", "51","52","53","54","55","56","61","62","71","72","81"	,"92"),
+gender_earnings_labels <- data.frame (ind_code  = c("11","21","22","23","31","32","33","42","44","45","48","49", "51","52","53","54","55","56","61","62","71","72","81","92"),
                   
-                                      description = c("Agriculture, Forestry, Fishing and Hunting", "Mining Quarrying, and Oil and Gas Extraction", "Utilities", 
-      "Construction", 
-      "Manufacturing", 
+                    description = c("Agriculture,Forestry, Fishing and Hunting", 
+                                    "Mining Quarrying, and Oil and Gas Extraction", 
+                                    "Utilities", 
+       "Construction", 
+      "Manufacturing",
+      "Manufacturing",
+      "Manufacturing",
       "Wholesale Trade", 
-      "Retail Trade", 
+      "Retail Trade",
+      "Retail Trade",
       "Transportation and Warehousing", 
+      "Transportation and Warehousing",
       "Information", 
       "Finance and Insurance", 
       "Real Estate and Rental and Leasing", 
-      "Professional, Scientific, and Technical Services", "Management of Companies and Enterprises", "Administrative and Support and Waste Management and Remediation Services", "Educational Services", "Health Care and Social Assistance", "Arts Entertainment and Recreation","Accommodation and Food Services","Other Services (except Public Administration)","Public Administration")
+      "Professional, Scientific, and Technical Services", 
+      "Management of Companies and Enterprises", 
+      "Administrative and Support and Waste Management and Remediation Services", 
+      "Educational Services", "Health Care and Social Assistance", 
+      "Arts Entertainment and Recreation",
+      "Accommodation and Food Services",
+      "Other Services (except Public Administration)","Public Administration")
                   )
 
 save(H_gender, H_earntype, H_earntype_kids, CB_earntype, gender_earnings_labels, H_earntype_kids_cost_burden,
@@ -550,7 +562,66 @@ cut_95 = quantile(lville_2019$HHINCOME, probs = 0.95)
 ```
 
 ```{r, include = FALSE}
-gender_earnings <- glpdata::industry_gender_earnings
+
+#sandbox
+
+
+```
+
+
+```{r, include = FALSE}
+View(glpdata::industry_gender_earnings)
+
+ind_gender_earn_temp <- glpdata::industry_gender_earnings
+
+ind_gender_earn_temp$ind_code = substr(ind_gender_earn_temp$industry,1,2)
+ind_gender_earn_temp <- ind_gender_earn_temp %>% relocate(ind_code, .before = FIPS)
+
+industry_gender_final <- merge(ind_gender_earn_temp, gender_earnings_labels, by = "ind_code")
+
+industry_gender_final <- industry_gender_final %>% 
+        rename(description_broad = description)
+
+```
+
+```{r, include = FALSE}
+
+sf_ind_2019 <- industry_gender_final %>%
+  filter(FIPS == 21111,
+         year == 2019,
+         ind_level == 2) %>% #keeps from double or triple counting
+  group_by(sex, description_broad) %>%
+  summarize(n = sum(jobs)
+            )%>%
+  mutate(total = sum(n),
+         rate = n/sum(n) *100
+  )
+
+female_sf_ind_2019 <- sf_ind_2019 %>%
+  filter(sex == "female")
+##Top three sectors:
+#Health Care & Social Assistance, Retail, Accomodation & Food Services
+
+male_sf_ind_2019 <- sf_ind_2019 %>%
+  filter(sex == "male") 
+##Top three sectors:
+#Manufacturing, Transportation & Warehousing, Retail
+
+
+```
+
+```{r}
+
+sf_ind_2019_plot <- ggplot(sf_ind_2019,
+      aes(x=sex,
+          y=rate,
+          fill = description_broad)) +
+  geom_bar(stat="identity", position = "fill") +
+  geom_text(aes(y = rate, label = percent(rate, scale = 1, accuracy = 0.1)), 
+            position = position_fill(vjust = 0.5), size = 24,
+            color = "white")
+
+sf_ind_2019_plot
 
 ```
 
@@ -864,7 +935,12 @@ func_income_by_kids <- function(num_kids, living_wage) {
                weight = HHWT)) +
     geom_histogram(alpha=0.5, position = 'identity', binwidth = 10000) +
      geom_vline( aes(xintercept = living_wage), linetype = "dashed",  colour="blue", size = 1.5) +
-     annotate("text", x=round(living_wage - 2000), y=0.3, label=living_wage, angle=90 )
+     annotate("text", x=living_wage - 3500, y=0.3, label=dollar(living_wage, 
+                                                                       scale = 0.001,
+                                                                      accuracy = 0.1,
+                                                                       suffix = "k"), 
+                                                                          angle=0,
+                                                                        family = "Museo Sans")
    
 
 #sing_fem_inc_race_plt <- sing_fem_inc_race_plt + facet_wrap(~race, nrow = 2) 
@@ -1566,7 +1642,8 @@ homeownership_sf_plot <- ggplot(temp_df,
   geom_line(linetype = "dashed",  color="#800055", size=2) +
   geom_point(color="#800055", size=4) + 
   
-  geom_vline( aes(xintercept = 34500), linetype = "dashed",  colour="blue", size = 1.5) 
+  geom_vline( aes(),xintercept = 25, linetype = "dashed",  colour="blue", size = 1.5) 
+  #our x-axis not HHINCOME...
   # annotate("text", x=round(34500 - 2000), y=0.5, label=34500, angle=90 )
 
 homeownership_sf_plot <- homeownership_sf_plot + glp_graph_theme
